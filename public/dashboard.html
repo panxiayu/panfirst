@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>宁波兴利汽车模具</title>
+    <link rel="stylesheet" href="css/linear.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        .welcome { margin-bottom: 32px; }
+        .welcome h1 { font-size: 24px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.5px; }
+        .welcome p { color: var(--text-secondary); font-size: 13px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 40px; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; text-align: center; transition: all 0.15s; }
+        .stat-card:hover { border-color: var(--border-dark); }
+        .stat-icon { width: 40px; height: 40px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 18px; margin: 0 auto 14px; }
+        .stat-icon.staff { background: rgba(94,106,210,0.15); }
+        .stat-icon.exam { background: rgba(235,87,87,0.15); }
+        .stat-icon.meal { background: rgba(229,160,0,0.15); }
+        .stat-icon.voting { background: rgba(38,166,65,0.15); }
+        .stat-icon.learning { background: rgba(50,205,50,0.15); }
+        .stat-value { font-size: 28px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.5px; }
+        .stat-label { color: var(--text-secondary); font-size: 12px; font-weight: 500; }
+        .section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .page-logo { font-size: 24px !important; font-weight: 700; letter-spacing: 1px; color: var(--text-primary); }
+        .admin-area { display: flex; align-items: center; gap: 12px; }
+        .admin-name { font-size: 13px; color: #667eea; font-weight: 600; }
+        .admin-logout {
+            padding: 6px 14px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            color: #667eea;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .admin-logout:hover { background: rgba(102, 126, 234, 0.2); }
+        .page-header { justify-content: center; position: relative; }
+        .page-header-left { position: absolute; left: 24px; }
+        .page-header-right { position: absolute; right: 24px; }
+        .systems-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 40px; }
+        .system-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; cursor: pointer; transition: all 0.15s; text-decoration: none; color: inherit; display: block; }
+        .system-card:hover { border-color: var(--border-dark); }
+        .system-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+        .system-icon { width: 44px; height: 44px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .system-icon.staff { background: rgba(94,106,210,0.15); }
+        .system-icon.exam { background: rgba(235,87,87,0.15); }
+        .system-icon.meal { background: rgba(229,160,0,0.15); }
+        .system-icon.voting { background: rgba(38,166,65,0.15); }
+        .system-icon.learning { background: rgba(50,205,50,0.15); }
+        .system-icon.permission { background: rgba(128,90,213,0.15); }
+        .system-badge { padding: 4px 8px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; }
+        .badge-active { background: rgba(38,166,65,0.15); color: var(--success); }
+        .system-name { font-size: 15px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.2px; }
+        .system-desc { color: var(--text-secondary); font-size: 13px; margin-bottom: 16px; line-height: 1.5; }
+        .system-stats { display: flex; gap: 24px; padding-top: 14px; border-top: 1px solid var(--border); }
+        .sys-stat { display: flex; flex-direction: column; }
+        .sys-stat-value { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+        .sys-stat-label { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+        @media (max-width: 768px) {
+            .container { padding: 16px 12px !important; }
+            .page-header { padding: 12px 16px !important; flex-wrap: wrap; gap: 8px; }
+            .page-logo { font-size: 18px !important; }
+            .welcome { margin-bottom: 20px; }
+            .welcome h1 { font-size: 18px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+            .stat-card { padding: 14px; }
+            .stat-value { font-size: 22px; }
+            .stat-icon { width: 32px; height: 32px; font-size: 14px; margin-bottom: 10px; }
+            .systems-grid { grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px; }
+            .system-card { padding: 14px; }
+            .section-title { font-size: 12px; margin-bottom: 12px; }
+            .system-icon { width: 36px; height: 36px; font-size: 16px; }
+            .system-name { font-size: 14px; }
+            .system-desc { font-size: 12px; margin-bottom: 12px; }
+            .system-stats { gap: 16px; padding-top: 10px; }
+            .sys-stat-value { font-size: 16px; }
+        }
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .stat-card { padding: 12px 8px; }
+            .stat-value { font-size: 20px; }
+            .stat-label { font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="page-header" style="justify-content: center;">
+        <span class="page-logo">宁波兴利汽车模具</span>
+        <div class="page-header-right" id="adminArea" style="display:flex;align-items:center;gap:12px;position:absolute;right:20px;">
+            <span id="adminName" style="font-size:13px;color:#667eea;font-weight:600;">管理员</span>
+            <a href="javascript:;" id="adminBtn" style="padding:6px 14px;background:rgba(102,126,234,0.1);border-radius:8px;color:#667eea;font-size:13px;font-weight:500;text-decoration:none;">注销</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="welcome">
+            <h1>欢迎回来</h1>
+            <p id="currentTime">加载中...</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-icon staff">👥</div>
+                <div class="stat-value" id="staffCount">-</div>
+                <div class="stat-label">员工总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon exam">📝</div>
+                <div class="stat-value" id="examCount">-</div>
+                <div class="stat-label">考试总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon meal">🍽️</div>
+                <div class="stat-value" id="mealCount">-</div>
+                <div class="stat-label">报餐活动</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon voting">📊</div>
+                <div class="stat-value" id="votingCount">-</div>
+                <div class="stat-label">投票活动</div>
+            </div>
+        </div>
+
+        <!-- Systems -->
+        <h2 class="section-title">💻 PC端功能入口（点击进入管理后台）</h2>
+        <div class="systems-grid" id="systemsGrid">
+            <a href="staff-list.html" class="system-card">
+                <div class="system-header">
+                    <div class="system-icon staff">👥</div>
+                    <span class="system-badge badge-active">运行中</span>
+                </div>
+                <div class="system-name">员工管理</div>
+                <div class="system-desc">管理员工信息、部门、职位等基础数据</div>
+                <div class="system-stats">
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="staffActive">-</span>
+                        <span class="sys-stat-label">在职员工</span>
+                    </div>
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="deptCount">-</span>
+                        <span class="sys-stat-label">部门数量</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="exam.html" class="system-card">
+                <div class="system-header">
+                    <div class="system-icon exam">📝</div>
+                    <span class="system-badge badge-active">运行中</span>
+                </div>
+                <div class="system-name">培训管理</div>
+                <div class="system-desc">学习任务、考试管理、成绩统计</div>
+                <div class="system-stats">
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="examPapers">-</span>
+                        <span class="sys-stat-label">试卷数量</span>
+                    </div>
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="examRecords">-</span>
+                        <span class="sys-stat-label">考试记录</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="meal-list.html" class="system-card">
+                <div class="system-header">
+                    <div class="system-icon meal">🍽️</div>
+                    <span class="system-badge badge-active">运行中</span>
+                </div>
+                <div class="system-name">报餐系统</div>
+                <div class="system-desc">员工每日报餐、菜单管理、订单统计</div>
+                <div class="system-stats">
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="mealActivities">-</span>
+                        <span class="sys-stat-label">活动数量</span>
+                    </div>
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="mealOrders">-</span>
+                        <span class="sys-stat-label">报餐订单</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="voting-list.html" class="system-card">
+                <div class="system-header">
+                    <div class="system-icon voting">📊</div>
+                    <span class="system-badge badge-active">运行中</span>
+                </div>
+                <div class="system-name">投票系统</div>
+                <div class="system-desc">发起投票、收集意见、统计结果</div>
+                <div class="system-stats">
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="votingActivities">-</span>
+                        <span class="sys-stat-label">投票活动</span>
+                    </div>
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="votingRecords">-</span>
+                        <span class="sys-stat-label">投票记录</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="6s-list.html" class="system-card">
+                <div class="system-header">
+                    <div class="system-icon staff">📋</div>
+                    <span class="system-badge badge-active">运行中</span>
+                </div>
+                <div class="system-name">6S管理</div>
+                <div class="system-desc">6S检查曝光记录，整改追踪管理</div>
+                <div class="system-stats">
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="6sTotal">-</span>
+                        <span class="sys-stat-label">曝光总数</span>
+                    </div>
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="6sPending">-</span>
+                        <span class="sys-stat-label">待整改</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="permission-list.html" class="system-card">
+                <div class="system-header">
+                    <div class="system-icon permission">🔐</div>
+                    <span class="system-badge badge-active">运行中</span>
+                </div>
+                <div class="system-name">权限管理</div>
+                <div class="system-desc">管理系统权限、用户权限配置</div>
+                <div class="system-stats">
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="permCount">-</span>
+                        <span class="sys-stat-label">权限数量</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="file-manager.html" class="system-card">
+                <div class="system-header">
+                    <div class="system-icon staff">📁</div>
+                    <span class="system-badge badge-active">运行中</span>
+                </div>
+                <div class="system-name">文件管理</div>
+                <div class="system-desc">上传、下载、管理系统文件资料</div>
+                <div class="system-stats">
+                    <div class="sys-stat">
+                        <span class="sys-stat-value" id="fileCount">-</span>
+                        <span class="sys-stat-label">文件数量</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+        const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+
+        function updateTime() {
+            const now = new Date();
+            const options = {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('currentTime').textContent = now.toLocaleString('zh-CN', options);
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        async function loadDashboardData() {
+            if (!token) {
+                loadPublicData();
+                return;
+            }
+
+            const headers = { 'Authorization': `Bearer ${token}` };
+
+            try {
+                const [
+                    staffRes,
+                    examListRes,
+                    mealRes,
+                    votingRes,
+                    fileRes,
+                    permRes,
+                    sixSRes
+                ] = await Promise.all([
+                    fetch(`${API_URL}/staff/`, { headers }).then(r => r.json()),
+                    fetch(`${API_URL}/exam/list`, { headers }).then(r => r.json()),
+                    fetch(`${API_URL}/meal/list`, { headers }).then(r => r.json()),
+                    fetch(`${API_URL}/voting/list`, { headers }).then(r => r.json()),
+                    fetch(`${API_URL}/file-manager/list`, { headers }).then(r => r.json()).catch(() => ({ data: [] })),
+                    fetch(`${API_URL}/admin/permissions`, { headers }).then(r => r.json()).catch(() => ({ data: [] })),
+                    fetch(`${API_URL}/6s/stats/summary`, { headers }).then(r => r.json()).catch(() => ({ data: { total: 0, pending: 0, fixed: 0 } }))
+                ]);
+
+                document.getElementById('staffCount').textContent = staffRes?.data?.length || 0;
+                document.getElementById('examCount').textContent = examListRes?.data?.length || 0;
+                document.getElementById('mealCount').textContent = mealRes?.data?.length || 0;
+                document.getElementById('votingCount').textContent = votingRes?.data?.length || 0;
+
+                const activeStaff = staffRes?.data?.filter(s => s.status === 'active').length || 0;
+                document.getElementById('staffActive').textContent = activeStaff;
+                document.getElementById('examPapers').textContent = examListRes?.data?.length || 0;
+                document.getElementById('mealActivities').textContent = mealRes?.data?.length || 0;
+                document.getElementById('votingActivities').textContent = votingRes?.data?.length || 0;
+                document.getElementById('fileCount').textContent = fileRes?.data?.length || 0;
+                document.getElementById('permCount').textContent = permRes?.data?.length || 0;
+                document.getElementById('6sTotal').textContent = sixSRes?.data?.total || 0;
+                document.getElementById('6sPending').textContent = sixSRes?.data?.pending || 0;
+
+                loadDetailedStats();
+
+            } catch (err) {
+                console.error('加载数据失败:', err);
+                loadPublicData();
+            }
+        }
+
+        async function loadDetailedStats() {
+            const headers = { 'Authorization': `Bearer ${token}` };
+
+            try {
+                const [examStatsRes] = await Promise.all([
+                    fetch(`${API_URL}/exam/stats/user`, { headers }).then(r => r.json()).catch(() => ({ data: {} }))
+                ]);
+
+                document.getElementById('examRecords').textContent = examStatsRes?.data?.summary?.total_exams || 0;
+            } catch (err) {
+                console.error('加载详细统计失败:', err);
+            }
+        }
+
+        async function loadPublicData() {
+            try {
+                const [staffRes, votingRes] = await Promise.all([
+                    fetch(`${API_URL}/staff/`).then(r => r.json()).catch(() => ({ data: [] })),
+                    fetch(`${API_URL}/voting/list`).then(r => r.json()).catch(() => ({ data: [] }))
+                ]);
+
+                document.getElementById('staffCount').textContent = staffRes?.data?.length || 0;
+                document.getElementById('votingCount').textContent = votingRes?.data?.length || 0;
+            } catch (err) {
+                console.log('加载公共数据失败');
+            }
+        }
+
+        function loadUserInfo() {
+            const user = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
+            if (user.nickname) {
+                document.getElementById('userName').textContent = user.nickname;
+                document.getElementById('userAvatar').textContent = user.nickname.charAt(0);
+            }
+        }
+
+        function updateAdminButton() {
+            const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+            const adminBtn = document.getElementById('adminBtn');
+            const adminName = document.getElementById('adminName');
+            const adminArea = document.getElementById('adminArea');
+            if (token) {
+                adminArea.style.display = 'flex';
+                const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                adminName.textContent = user.nickname || '管理员';
+            } else {
+                adminArea.style.display = 'none';
+            }
+        }
+
+        // 绑定按钮事件
+        function bindAdminBtn() {
+            const btn = document.getElementById('adminBtn');
+            if (btn) {
+                btn.onclick = function() {
+                    const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+                    if (token) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('adminToken');
+                        localStorage.removeItem('currentUser');
+                        localStorage.removeItem('user');
+                        // 清除后跳转到首页
+                        window.location.href = window.location.origin + '/';
+                    } else {
+                        window.location.href = window.location.origin + '/admin/login.html';
+                    }
+                };
+            }
+        }
+
+        // 执行更新按钮
+        updateAdminButton();
+        bindAdminBtn();
+
+        loadUserInfo();
+        loadDashboardData();
+    </script>
+</body>
+</html>

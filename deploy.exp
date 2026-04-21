@@ -1,0 +1,16 @@
+#!/usr/bin/expect -f
+set timeout 120
+spawn ssh -o StrictHostKeyChecking=no -p 2222 openclaw@192.168.110.22
+expect "password:"
+send "pan99612\r"
+expect "~"
+send "cd /home/openclaw/apps/server && git pull origin master\r"
+expect "~"
+send "npm install\r"
+expect "~"
+send "pm2 restart exam-system 2>/dev/null || pm2 start src/index.js --name exam-system\r"
+expect "~"
+send "pm2 list\r"
+expect "~"
+send "exit\r"
+expect eof

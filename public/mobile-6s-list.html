@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>6S管理 - 兴利汽车模具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --ios-bg: #f2f2f7;
+            --ios-card: rgba(255,255,255,0.9);
+            --ios-blue: #007aff;
+            --ios-gray: #8e8e93;
+            --ios-radius: 16px;
+            --ios-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+            --transition: 0.3s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+            background: var(--ios-bg);
+            color: #1c1c1e;
+            padding-bottom: 80px;
+            padding-top: 20px;
+        }
+
+
+
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 16px;
+            text-align: center;
+            box-shadow: var(--ios-shadow);
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--ios-blue);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--ios-gray);
+            margin-top: 4px;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .filter-btn {
+            flex: 1;
+            padding: 10px;
+            background: var(--ios-card);
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--ios-gray);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .filter-btn.active {
+            background: var(--ios-blue);
+            color: white;
+        }
+
+        .ios-card {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: var(--ios-shadow);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .ios-card:active { transform: scale(0.98); opacity: 0.9; }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .card-meta {
+            font-size: 13px;
+            color: var(--ios-gray);
+            margin-bottom: 6px;
+        }
+
+        .card-desc {
+            font-size: 14px;
+            color: var(--ios-gray);
+            line-height: 1.4;
+        }
+
+        .image-grid {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .image-grid img {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-success { background: rgba(0,122,255,0.12); color: var(--ios-blue); }
+        .status-warning { background: rgba(255,149,0,0.12); color: #ff9500; }
+
+        .fab {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--ios-blue);
+            color: white;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,122,255,0.3);
+            cursor: pointer;
+            z-index: 998;
+            border: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ios-gray);
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--ios-blue);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ios-gray);
+        }
+        .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+        .tabbar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 76px;
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px;
+            border-top: 1px solid rgba(0,0,0,0.06);
+            z-index: 999;
+        }
+
+        .tab-item {
+            font-size: 12px;
+            color: var(--ios-gray);
+            text-align: center;
+            transition: var(--transition);
+        }
+        .tab-item.active { color: var(--ios-blue); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading" class="loading" style="display: none;">加载中...</div>
+
+        <div id="statsSection" style="display: none;">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-value" id="statTotal">0</div>
+                    <div class="stat-label">曝光总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statPending">0</div>
+                    <div class="stat-label">待整改</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statFixed">0</div>
+                    <div class="stat-label">已达标</div>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <button class="filter-btn active" onclick="setFilter('all')">全部</button>
+                <button class="filter-btn" onclick="setFilter('pending')">待整改</button>
+                <button class="filter-btn" onclick="setFilter('fixed')">已达标</button>
+            </div>
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">📋</div>
+            <div>暂无曝光记录</div>
+        </div>
+
+        <div id="recordList"></div>
+    </div>
+
+    <button class="fab" onclick="addRecord()">+</button>
+
+    <script>
+        const API = window.location.origin + '/api';
+        let token = localStorage.getItem('employee_token');
+        let currentFilter = 'all';
+        let allRecords = [];
+
+        if (!token) {
+            window.location.href = 'index.html';
+        }
+
+        function goBack() {
+            window.location.href = 'employee.html';
+        }
+
+        async function loadRecords() {
+            try {
+                const res = await fetch(API + '/6s', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.code === 0 && data.data) {
+                    allRecords = data.data.records || [];
+
+                    document.getElementById('statTotal').textContent = data.data.stats?.total || 0;
+                    document.getElementById('statPending').textContent = data.data.stats?.pending || 0;
+                    document.getElementById('statFixed').textContent = data.data.stats?.fixed || 0;
+                    document.getElementById('statsSection').style.display = '';
+
+                    renderRecords();
+                } else {
+                    document.getElementById('emptyState').style.display = '';
+                }
+            } catch (err) {
+                document.getElementById('loading').textContent = '加载失败';
+            }
+        }
+
+        function setFilter(status) {
+            currentFilter = status;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderRecords();
+        }
+
+        function renderRecords() {
+            let records = allRecords;
+            if (currentFilter !== 'all') {
+                records = records.filter(r => r.status === currentFilter);
+            }
+
+            if (records.length === 0) {
+                document.getElementById('emptyState').style.display = '';
+                document.getElementById('recordList').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('recordList').style.display = '';
+
+            const list = document.getElementById('recordList');
+            list.innerHTML = records.map(record => {
+                const statusText = record.status === 'fixed' ? '已达标' : '待整改';
+                return `
+                    <div class="ios-card" onclick="viewRecord(${record.id})">
+                        <div class="card-header">
+                            <span class="card-title">${record.project_code || '-'}</span>
+                            <span class="status-badge ${record.status === 'fixed' ? 'status-success' : 'status-warning'}">${statusText}</span>
+                        </div>
+                        <div class="card-meta">${record.area || '-'}</div>
+                        <div class="card-desc">${record.description || '-'}</div>
+                        ${record.before_image || record.after_image ? `
+                            <div class="image-grid">
+                                ${record.before_image ? `<img src="/uploads/6s/${record.before_image}" alt="整改前">` : ''}
+                                ${record.after_image ? `<img src="/uploads/6s/${record.after_image}" alt="整改后">` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function viewRecord(id) {
+            window.location.href = 'mobile-6s-detail.html?id=' + id;
+        }
+
+        function addRecord() {
+            window.location.href = 'mobile-6s-add.html';
+        }
+
+        loadRecords();
+    </script>
+</body>
+</html>

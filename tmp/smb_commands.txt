@@ -1,0 +1,5 @@
+cd 行政部
+cd 行政部共享数据
+prompt OFF
+get 1★员工花名册.xlsx /home/openclaw/apps/server/tmp/1★员工花名册.xlsx
+quit

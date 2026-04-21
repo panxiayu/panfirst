@@ -1,0 +1,111 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 底座渐变 - 薄荷绿 -->
+    <linearGradient id="baseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#98E4D4"/>
+      <stop offset="50%" stop-color="#7DD8C4"/>
+      <stop offset="100%" stop-color="#5DC4AE"/>
+    </linearGradient>
+
+    <!-- 封面 -->
+    <linearGradient id="coverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6AAAE8"/>
+      <stop offset="50%" stop-color="#4A90D9"/>
+      <stop offset="100%" stop-color="#3A7BC8"/>
+    </linearGradient>
+
+    <!-- 书页 -->
+    <linearGradient id="pageGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="80%" stop-color="#F8F9FA"/>
+      <stop offset="100%" stop-color="#E8ECF0"/>
+    </linearGradient>
+
+    <!-- 书脊 -->
+    <linearGradient id="spineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4A90D9"/>
+      <stop offset="50%" stop-color="#6AAAE8"/>
+      <stop offset="100%" stop-color="#4A90D9"/>
+    </linearGradient>
+
+    <!-- 装饰金色 -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE5A0"/>
+      <stop offset="50%" stop-color="#FFD97D"/>
+      <stop offset="100%" stop-color="#F5C560"/>
+    </linearGradient>
+
+    <!-- 高光 -->
+    <linearGradient id="gloss" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- 阴影 -->
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+    <filter id="dropShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#4A9CBB" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- 底座阴影 -->
+  <ellipse cx="64" cy="112" rx="38" ry="10" fill="#5DC4AE" opacity="0.3" filter="url(#softBlur)"/>
+
+  <!-- 圆角方形底座 -->
+  <rect x="12" y="12" width="104" height="104" rx="28" fill="url(#baseGrad)"/>
+  <rect x="12" y="12" width="104" height="104" rx="28" fill="url(#gloss)" opacity="0.3"/>
+
+  <!-- 书本厚度 - 底部和侧面 -->
+  <path d="M26 98 L26 32 Q26 24, 34 24 L94 24 Q102 24, 102 32 L102 98 Q102 106, 94 106 L34 106 Q26 106, 26 98" fill="#3A7BC8"/>
+  <path d="M26 98 L26 32 Q26 24, 34 24 L34 98 Q26 98, 26 98" fill="#4A90D9"/>
+  <path d="M102 98 L102 32 Q102 24, 94 24 L34 24 Q102 24, 102 32 L102 98 Q102 106, 94 106 L102 98" fill="#E8ECF0"/>
+
+  <!-- 书页 -->
+  <rect x="30" y="28" width="66" height="86" fill="url(#pageGrad)"/>
+
+  <!-- 书页顶部高光 -->
+  <rect x="30" y="28" width="66" height="6" fill="#FFFFFF" opacity="0.6"/>
+
+  <!-- 书脊 -->
+  <rect x="26" y="26" width="10" height="90" rx="3" fill="url(#spineGrad)"/>
+
+  <!-- 书脊高光 -->
+  <rect x="28" y="28" width="4" height="86" fill="#FFFFFF" opacity="0.25"/>
+
+  <!-- 书脊顶部金色装饰 -->
+  <rect x="26" y="26" width="10" height="8" rx="3" fill="url(#goldGrad)"/>
+  <rect x="26" y="102" width="10" height="8" rx="3" fill="url(#goldGrad)"/>
+
+  <!-- 封面 -->
+  <rect x="36" y="26" width="60" height="90" fill="url(#coverGrad)"/>
+
+  <!-- 封面高光 -->
+  <rect x="36" y="26" width="60" height="90" fill="url(#gloss)" opacity="0.2"/>
+
+  <!-- 封面装饰框 -->
+  <rect x="42" y="34" width="48" height="74" rx="4" fill="none" stroke="url(#goldGrad)" stroke-width="2"/>
+
+  <!-- 书本图案 - 毕业帽 -->
+  <g transform="translate(50, 42)">
+    <!-- 帽子底部 -->
+    <ellipse cx="20" cy="40" rx="18" ry="6" fill="url(#goldGrad)"/>
+    <!-- 帽子顶部 -->
+    <path d="M8 40 L20 10 L32 40 Z" fill="url(#goldGrad)"/>
+    <!-- 帽子中间 -->
+    <rect x="10" y="32" width="20" height="10" fill="url(#goldGrad)"/>
+    <!-- 流苏 -->
+    <circle cx="20" cy="10" r="3" fill="url(#goldGrad)"/>
+    <rect x="18" y="10" width="4" height="14" rx="2" fill="url(#goldGrad)"/>
+    <!-- 流苏球 -->
+    <circle cx="20" cy="26" r="4" fill="#FFE5A0"/>
+  </g>
+
+  <!-- 封面文字线 -->
+  <rect x="48" y="78" width="36" height="4" rx="2" fill="url(#goldGrad)" opacity="0.8"/>
+  <rect x="52" y="86" width="28" height="3" rx="1.5" fill="url(#goldGrad)" opacity="0.6"/>
+
+  <!-- 右侧高光 -->
+  <rect x="90" y="26" width="4" height="90" fill="#FFFFFF" opacity="0.15"/>
+</svg>

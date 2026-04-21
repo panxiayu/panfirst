@@ -1,0 +1,2 @@
+https://console.cloud.tencent.com/ssl
+https://console.cloud.tencent.com/domain/all-domain/manage/domain-d2t7xonq/basicinfo

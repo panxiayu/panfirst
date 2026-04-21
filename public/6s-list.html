@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6S管理 - 兴利汽车模具</title>
+    <link rel="stylesheet" href="css/linear.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, var(--bg-page) 0%, var(--bg-surface) 50%, var(--bg-page) 100%); color: var(--text-primary); min-height: 100vh; }
+        .container { width: 100% !important; max-width: 1600px !important; margin: 0 auto; padding: 20px 24px; box-sizing: border-box; overflow-x: auto; }
+
+        /* 顶部工具栏 */
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 10px; width: 100%; box-sizing: border-box; }
+        .toolbar-left { display: flex; align-items: center; gap: 12px; }
+        .toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .page-title { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-primary); }
+
+        /* 按钮 */
+        .btn { padding: 8px 14px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; transition: all 0.2s; }
+        .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+        .btn:active { transform: translateY(0); }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; box-shadow: 0 3px 10px rgba(59,130,246,0.3); }
+        .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--white); border-color: var(--border-dark); }
+        .btn-warning { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        /* 统计卡片 */
+        .stats-grid { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+        .stat-card { flex: 1; min-width: 140px; background: var(--bg-card); border-radius: var(--radius-lg); padding: 16px 20px; box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,0.6); }
+        .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--text-primary); }
+        .stat-card.warning .stat-value { color: #f59e0b; }
+        .stat-card.success .stat-value { color: #22c55e; }
+
+        /* 搜索栏 */
+        .search-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; width: 100%; box-sizing: border-box; }
+        .search-input { padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text-primary); min-width: 120px; transition: all 0.2s; }
+        .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); background: var(--white); }
+        .search-input::placeholder { color: var(--text-muted); }
+        select.search-input { min-width: 110px; }
+
+        /* 记录卡片列表 */
+        .records-list { display: flex; flex-direction: column; gap: 12px; }
+        .record-card { display: flex; background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,0.6); transition: all 0.2s; cursor: pointer; }
+        .record-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .record-images { display: flex; gap: 2px; width: 200px; flex-shrink: 0; }
+        .record-images img { width: 100px; height: 100px; object-fit: cover; }
+        .record-images .no-image { width: 100px; height: 100px; background: var(--bg-input); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 12px; }
+        .record-content { flex: 1; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+        .record-header { display: flex; justify-content: space-between; align-items: center; }
+        .record-project { font-weight: 700; font-size: 14px; color: var(--text-primary); }
+        .record-status { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .record-status.pending { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .record-status.fixed { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .record-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
+        .record-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .record-meta-item { display: flex; align-items: center; gap: 4px; }
+        .record-date { font-size: 12px; color: var(--text-muted); margin-top: auto; }
+
+        /* 状态提示 */
+        .loading, .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+        .empty-state { padding: 60px 20px; }
+
+        /* 模态框 */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(30,58,138,0.4); backdrop-filter: blur(20px); align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-box { background: var(--bg-card); border-radius: var(--radius-lg); padding: 24px; width: 90%; max-width: 500px; box-shadow: var(--shadow-lg); border: 1px solid rgba(255,255,255,0.5); animation: modalIn 0.25s ease; max-height: 90vh; overflow-y: auto; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--text-primary); }
+        .modal-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+        /* 表单项 */
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--text-secondary); font-size: 13px; }
+        .form-control { width: 100%; padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; color: var(--text-primary); box-sizing: border-box; transition: all 0.2s; }
+        .form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); background: var(--white); }
+        .form-control::placeholder { color: var(--text-muted); }
+        select.form-control { background: var(--bg-input); }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+        .image-upload-wrap { display: flex; gap: 12px; flex-wrap: wrap; }
+        .image-upload-item { flex: 1; min-width: 140px; }
+        .image-upload-label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--text-secondary); font-size: 12px; }
+        .image-preview { width: 100%; max-height: 120px; border-radius: var(--radius); object-fit: cover; margin-top: 8px; background: var(--bg-input); }
+
+        /* 详情弹窗 */
+        .detail-modal .modal-box { max-width: 800px; }
+        .detail-images { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+        .detail-image-wrap { flex: 1; min-width: 280px; }
+        .detail-image-label { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
+        .detail-image { width: 100%; max-height: 250px; object-fit: contain; border-radius: var(--radius); background: var(--bg-input); }
+        .detail-info { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .detail-item { }
+        .detail-item-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+        .detail-item-value { font-size: 14px; color: var(--text-primary); font-weight: 500; }
+        .detail-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部工具栏 -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <span class="page-title">6S管理</span>
+            </div>
+            <div class="toolbar-right">
+                <button class="btn btn-secondary btn-sm" onclick="goBack()">返回</button>
+                <button class="btn btn-warning btn-sm" onclick="openDetailModal()">检查曝光</button>
+                <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ 添加记录</button>
+            </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">曝光总数</div>
+                <div class="stat-value" id="statTotal">0</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-label">待整改</div>
+                <div class="stat-value" id="statPending">0</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-label">已达标</div>
+                <div class="stat-value" id="statFixed">0</div>
+            </div>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="search-bar">
+            <select class="search-input" id="projectFilter">
+                <option value="">所有项目</option>
+            </select>
+            <select class="search-input" id="statusFilter">
+                <option value="">所有状态</option>
+                <option value="pending">待整改</option>
+                <option value="fixed">已达标</option>
+            </select>
+            <input type="text" class="search-input" id="searchInput" placeholder="搜索项目/描述/责任人..." style="flex: 1; min-width: 180px;">
+            <button class="btn btn-primary btn-sm" onclick="loadRecords()">搜索</button>
+        </div>
+
+        <!-- 记录列表 -->
+        <div id="loading" class="loading" style="display: none;">加载中...</div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div style="font-size: 48px; margin-bottom: 12px;">📋</div>
+            <div>暂无曝光记录</div>
+        </div>
+        <div id="recordsContainer" class="records-list"></div>
+    </div>
+
+    <!-- 添加/编辑弹窗 -->
+    <div id="addModal" class="modal">
+        <div class="modal-box">
+            <div class="modal-title" id="addModalTitle">添加曝光记录</div>
+            <form onsubmit="submitForm(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>项目编号 *</label>
+                        <input type="text" id="formProjectCode" class="form-control" required placeholder="如: 0323-03286S">
+                    </div>
+                    <div class="form-group">
+                        <label>状态</label>
+                        <select id="formStatus" class="form-control">
+                            <option value="pending">待整改</option>
+                            <option value="fixed">已达标</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>问题描述</label>
+                    <textarea id="formDescription" class="form-control" rows="2" placeholder="描述问题..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>责任人</label>
+                        <input type="text" id="formPersonCharge" class="form-control" placeholder="责任人姓名">
+                    </div>
+                    <div class="form-group">
+                        <label>区域</label>
+                        <input type="text" id="formArea" class="form-control" placeholder="如: 213">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>检查日期</label>
+                    <input type="date" id="formCheckDate" class="form-control">
+                </div>
+                <div class="image-upload-wrap">
+                    <div class="image-upload-item">
+                        <label class="image-upload-label">整改前图片</label>
+                        <input type="file" id="formBeforeImage" class="form-control" accept="image/*" onchange="previewImage(this, 'beforePreview')">
+                        <img id="beforePreview" class="image-preview" style="display: none;">
+                    </div>
+                    <div class="image-upload-item">
+                        <label class="image-upload-label">整改后图片</label>
+                        <input type="file" id="formAfterImage" class="form-control" accept="image/*" onchange="previewImage(this, 'afterPreview')">
+                        <img id="afterPreview" class="image-preview" style="display: none;">
+                    </div>
+                </div>
+                <input type="hidden" id="formId">
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div id="detailModal" class="modal detail-modal">
+        <div class="modal-box">
+            <div class="modal-title" id="detailModalTitle">曝光详情</div>
+            <div class="detail-images">
+                <div class="detail-image-wrap">
+                    <div class="detail-image-label">整改前</div>
+                    <img id="detailBeforeImage" class="detail-image" src="" alt="整改前">
+                </div>
+                <div class="detail-image-wrap">
+                    <div class="detail-image-label">整改后</div>
+                    <img id="detailAfterImage" class="detail-image" src="" alt="整改后">
+                </div>
+            </div>
+            <div class="detail-info">
+                <div class="detail-item">
+                    <div class="detail-item-label">项目编号</div>
+                    <div class="detail-item-value" id="detailProjectCode">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-item-label">状态</div>
+                    <div class="detail-item-value" id="detailStatus">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-item-label">责任人</div>
+                    <div class="detail-item-value" id="detailPersonCharge">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-item-label">区域</div>
+                    <div class="detail-item-value" id="detailArea">-</div>
+                </div>
+                <div class="detail-item" style="grid-column: span 2;">
+                    <div class="detail-item-label">问题描述</div>
+                    <div class="detail-item-value" id="detailDescription">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-item-label">检查日期</div>
+                    <div class="detail-item-value" id="detailCheckDate">-</div>
+                </div>
+            </div>
+            <div class="detail-actions">
+                <button class="btn btn-secondary btn-sm" onclick="closeDetailModal()">关闭</button>
+                <button class="btn btn-primary btn-sm" onclick="editCurrentRecord()">编辑</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCurrentRecord()">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+        const getToken = () => localStorage.getItem('token');
+        let currentRecords = [];
+        let currentDetailId = null;
+
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!getToken()) {
+                window.location.href = 'admin/login.html';
+                return;
+            }
+            loadRecords();
+        });
+
+        // 加载记录
+        function loadRecords() {
+            const container = document.getElementById('recordsContainer');
+            const loading = document.getElementById('loading');
+            const emptyState = document.getElementById('emptyState');
+
+            loading.style.display = 'block';
+            container.innerHTML = '';
+            emptyState.style.display = 'none';
+
+            const search = document.getElementById('searchInput').value;
+            const status = document.getElementById('statusFilter').value;
+            const project = document.getElementById('projectFilter').value;
+
+            let url = `${API_URL}/6s?`;
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            if (status) url += `status=${status}&`;
+            if (project) url += `project=${project}&`;
+
+            fetch(url, { headers: { 'Authorization': `Bearer ${getToken()}` } })
+            .then(res => res.json())
+            .then(data => {
+                loading.style.display = 'none';
+                if (data.code === 0) {
+                    const { records, stats, projects } = data.data;
+
+                    // 更新统计
+                    document.getElementById('statTotal').textContent = stats.total;
+                    document.getElementById('statPending').textContent = stats.pending;
+                    document.getElementById('statFixed').textContent = stats.fixed;
+
+                    // 更新项目筛选
+                    const projectFilter = document.getElementById('projectFilter');
+                    const currentProject = projectFilter.value;
+                    projectFilter.innerHTML = '<option value="">所有项目</option>';
+                    projects.forEach(p => {
+                        projectFilter.innerHTML += `<option value="${p.project_code}">${p.project_code}</option>`;
+                    });
+                    projectFilter.value = currentProject;
+
+                    currentRecords = records;
+
+                    if (records.length === 0) {
+                        emptyState.style.display = 'block';
+                    } else {
+                        renderRecords(records);
+                    }
+                } else {
+                    alert(data.msg);
+                }
+            })
+            .catch(err => {
+                loading.style.display = 'none';
+                console.error(err);
+                alert('加载失败');
+            });
+        }
+
+        // 渲染记录列表
+        function renderRecords(records) {
+            const container = document.getElementById('recordsContainer');
+            container.innerHTML = records.map(r => `
+                <div class="record-card" onclick="viewDetail(${r.id})">
+                    <div class="record-images">
+                        ${r.before_image ? `<img src="/uploads/6s/${r.before_image}" alt="整改前" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=no-image>整改前</div>')">` : '<div class="no-image">整改前</div>'}
+                        ${r.after_image ? `<img src="/uploads/6s/${r.after_image}" alt="整改后" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=no-image>整改后</div>')">` : '<div class="no-image">整改后</div>'}
+                    </div>
+                    <div class="record-content">
+                        <div class="record-header">
+                            <span class="record-project">${r.project_code}</span>
+                            <span class="record-status ${r.status}">${r.status === 'pending' ? '待整改' : '已达标'}</span>
+                        </div>
+                        <div class="record-desc">${r.description || '-'}</div>
+                        <div class="record-meta">
+                            <span class="record-meta-item">👤 ${r.person_charge || '-'}</span>
+                            <span class="record-meta-item">📍 ${r.area || '-'}</span>
+                        </div>
+                        <div class="record-date">📅 ${r.check_date || r.created_at?.split('T')[0] || '-'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 查看详情
+        function viewDetail(id) {
+            currentDetailId = id;
+            const record = currentRecords.find(r => r.id === id);
+            if (!record) return;
+
+            document.getElementById('detailProjectCode').textContent = record.project_code;
+            document.getElementById('detailStatus').innerHTML = record.status === 'pending'
+                ? '<span style="color:#f59e0b;font-weight:600;">待整改</span>'
+                : '<span style="color:#22c55e;font-weight:600;">已达标</span>';
+            document.getElementById('detailPersonCharge').textContent = record.person_charge || '-';
+            document.getElementById('detailArea').textContent = record.area || '-';
+            document.getElementById('detailDescription').textContent = record.description || '-';
+            document.getElementById('detailCheckDate').textContent = record.check_date || record.created_at?.split('T')[0] || '-';
+
+            const beforeImg = document.getElementById('detailBeforeImage');
+            const afterImg = document.getElementById('detailAfterImage');
+
+            if (record.before_image) {
+                beforeImg.src = `/uploads/6s/${record.before_image}`;
+                beforeImg.style.display = 'block';
+            } else {
+                beforeImg.src = '';
+                beforeImg.style.display = 'none';
+            }
+
+            if (record.after_image) {
+                afterImg.src = `/uploads/6s/${record.after_image}`;
+                afterImg.style.display = 'block';
+            } else {
+                afterImg.src = '';
+                afterImg.style.display = 'none';
+            }
+
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        // 打开添加弹窗
+        function openAddModal() {
+            document.getElementById('addModalTitle').textContent = '添加曝光记录';
+            document.getElementById('formId').value = '';
+            document.getElementById('formProjectCode').value = '';
+            document.getElementById('formDescription').value = '';
+            document.getElementById('formPersonCharge').value = '';
+            document.getElementById('formArea').value = '';
+            document.getElementById('formStatus').value = 'pending';
+            document.getElementById('formCheckDate').value = '';
+            document.getElementById('formBeforeImage').value = '';
+            document.getElementById('formAfterImage').value = '';
+            document.getElementById('beforePreview').style.display = 'none';
+            document.getElementById('afterPreview').style.display = 'none';
+            document.getElementById('addModal').classList.add('active');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.remove('active');
+        }
+
+        // 编辑当前记录
+        function editCurrentRecord() {
+            const record = currentRecords.find(r => r.id === currentDetailId);
+            if (!record) return;
+
+            closeDetailModal();
+
+            document.getElementById('addModalTitle').textContent = '编辑曝光记录';
+            document.getElementById('formId').value = record.id;
+            document.getElementById('formProjectCode').value = record.project_code;
+            document.getElementById('formDescription').value = record.description || '';
+            document.getElementById('formPersonCharge').value = record.person_charge || '';
+            document.getElementById('formArea').value = record.area || '';
+            document.getElementById('formStatus').value = record.status;
+            document.getElementById('formCheckDate').value = record.check_date || '';
+            document.getElementById('formBeforeImage').value = '';
+            document.getElementById('formAfterImage').value = '';
+
+            if (record.before_image) {
+                document.getElementById('beforePreview').src = `/uploads/6s/${record.before_image}`;
+                document.getElementById('beforePreview').style.display = 'block';
+            } else {
+                document.getElementById('beforePreview').style.display = 'none';
+            }
+
+            if (record.after_image) {
+                document.getElementById('afterPreview').src = `/uploads/6s/${record.after_image}`;
+                document.getElementById('afterPreview').style.display = 'block';
+            } else {
+                document.getElementById('afterPreview').style.display = 'none';
+            }
+
+            document.getElementById('addModal').classList.add('active');
+        }
+
+        // 删除当前记录
+        function deleteCurrentRecord() {
+            if (!confirm('确定删除这条曝光记录？')) return;
+
+            fetch(`${API_URL}/6s/${currentDetailId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                    alert('删除成功');
+                    closeDetailModal();
+                    loadRecords();
+                } else {
+                    alert(data.msg);
+                }
+            })
+            .catch(() => alert('删除失败'));
+        }
+
+        // 提交表单
+        function submitForm(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('formId').value;
+            const isEdit = !!id;
+
+            const formData = new FormData();
+            formData.append('project_code', document.getElementById('formProjectCode').value);
+            formData.append('description', document.getElementById('formDescription').value);
+            formData.append('person_charge', document.getElementById('formPersonCharge').value);
+            formData.append('area', document.getElementById('formArea').value);
+            formData.append('status', document.getElementById('formStatus').value);
+            formData.append('check_date', document.getElementById('formCheckDate').value);
+
+            const beforeFile = document.getElementById('formBeforeImage').files[0];
+            const afterFile = document.getElementById('formAfterImage').files[0];
+            if (beforeFile) formData.append('before_image', beforeFile);
+            if (afterFile) formData.append('after_image', afterFile);
+
+            const url = isEdit ? `${API_URL}/6s/${id}` : `${API_URL}/6s`;
+            const method = isEdit ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method,
+                headers: { 'Authorization': `Bearer ${getToken()}` },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                    alert(isEdit ? '更新成功' : '添加成功');
+                    closeAddModal();
+                    loadRecords();
+                } else {
+                    alert(data.msg);
+                }
+            })
+            .catch(() => alert('操作失败'));
+        }
+
+        // 图片预览
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // 检查曝光（模拟跳转到曝光页面）
+        function openDetailModal() {
+            alert('检查曝光功能：可通过添加记录来曝光新的问题');
+        }
+
+        // 返回
+        function goBack() {
+            window.location.href = 'dashboard.html';
+        }
+
+        // 自动搜索（200ms防抖）
+        let searchTimeout = null;
+        document.getElementById('searchInput').addEventListener('input', () => {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(loadRecords, 200);
+        });
+        document.getElementById('statusFilter').addEventListener('change', loadRecords);
+        document.getElementById('projectFilter').addEventListener('change', loadRecords);
+    </script>
+</body>
+</html>

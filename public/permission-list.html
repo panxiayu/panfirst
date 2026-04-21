@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权限管理 - 兴利汽车模具</title>
+    <link rel="stylesheet" href="css/linear.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        .perm-tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--bg-hover); padding: 4px; border-radius: var(--radius); flex-wrap: wrap; }
+        .perm-tab { padding: 10px 16px; border: none; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s; white-space: nowrap; }
+        .perm-tab:hover { color: var(--text-primary); }
+        .perm-tab.active { background: var(--bg-card); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .perm-section { display: none; }
+        .perm-section.active { display: block; }
+        .admin-list { margin-top: 16px; }
+        .admin-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; }
+        .admin-item:hover { border-color: var(--border-dark); }
+        .admin-info { display: flex; align-items: center; gap: 12px; }
+        .admin-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+        .admin-name { font-weight: 500; font-size: 14px; }
+        .slide-btn { position: relative; width: 72px; height: 30px; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; overflow: hidden; flex-shrink: 0; }
+        .slide-btn.off { background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%); }
+        .slide-btn.on { background: linear-gradient(135deg, #23a559 0%, #34d058 100%); }
+        .slide-btn .slide-thumb { position: absolute; width: 26px; height: 26px; top: 2px; left: 2px; background: white; border-radius: 50%; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+        .slide-btn.on .slide-thumb { left: calc(100% - 28px); }
+
+        /* 资源列表样式 */
+        .resource-list { margin-top: 16px; }
+        .resource-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+        .resource-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; }
+        .resource-header:hover { background: var(--bg-hover); }
+        .resource-title { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        .resource-meta { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+        .resource-badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .badge-customer { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .badge-employee { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .resource-arrow { font-size: 18px; color: var(--text-secondary); transition: transform 0.2s; }
+        .resource-item.open .resource-arrow { transform: rotate(90deg); }
+        .resource-body { display: none; padding: 16px; border-top: 1px solid var(--border); }
+        .resource-item.open .resource-body { display: block; }
+        .perm-count { font-size: 12px; color: var(--text-secondary); }
+
+        /* 员工权限表格 */
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .data-table th { background: var(--bg-surface); font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
+        .data-table tr:hover { background: var(--bg-hover); }
+        .perm-badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .perm-on { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .perm-off { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+        /* 权限复选框组 */
+        .perm-checkboxes { display: flex; gap: 16px; flex-wrap: wrap; }
+        .perm-checkbox { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .perm-checkbox input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+        .perm-checkbox label { font-size: 13px; cursor: pointer; }
+
+        .loading { text-align: center; padding: 40px; color: var(--text-secondary); }
+        .empty-state { text-align: center; padding: 40px; color: var(--text-secondary); }
+
+        /* 按钮和工具栏 */
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+        .btn { padding: 8px 16px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-box { background: var(--bg-card); border-radius: var(--radius-lg); padding: 24px; width: 90%; max-width: 700px; max-height: 80vh; overflow-y: auto; }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; width: 100%; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: var(--text-secondary); }
+        .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; background: var(--bg-input); color: var(--text-primary); }
+        .form-control:focus { outline: none; border-color: var(--accent); }
+        .form-control[readonly] { background: var(--bg-surface); }
+        textarea.form-control { resize: vertical; min-height: 100px; font-family: inherit; }
+        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+        .import-area { width: 100%; height: 200px; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; font-size: 12px; font-family: monospace; background: var(--bg-input); color: var(--text-primary); resize: vertical; }
+        .import-area:focus { outline: none; border-color: var(--accent); }
+        .import-help { font-size: 11px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5; }
+        .import-result { margin-top: 10px; padding: 10px; border-radius: var(--radius); font-size: 13px; display: none; }
+        .import-result.success { background: rgba(34, 197, 94, 0.1); color: #22c55e; display: block; }
+        .import-result.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; display: block; }
+
+        .select-all-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--bg-surface); border-radius: var(--radius); margin-bottom: 12px; }
+        .select-all-row label { font-size: 13px; cursor: pointer; }
+
+        /* 报餐权限样式 */
+        .meal-perm-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+        .meal-perm-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .meal-perm-title { font-size: 15px; font-weight: 600; }
+        .meal-perm-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+        .meal-perm-stats { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-surface); border-radius: var(--radius); margin-bottom: 12px; }
+        .meal-perm-stats .stat-num { font-size: 20px; font-weight: 700; color: var(--accent); }
+        .meal-perm-stats .stat-label { font-size: 13px; color: var(--text-secondary); }
+        .meal-perm-search { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .meal-perm-search .form-control { flex: 1; min-width: 120px; }
+        .meal-perm-list { max-height: 500px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.2) transparent; }
+        .meal-perm-list::-webkit-scrollbar { height: 6px; }
+        .meal-perm-list::-webkit-scrollbar-track { background: transparent; border-radius: 3px; }
+        .meal-perm-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 3px; }
+        .meal-perm-list::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.35); }
+        .meal-perm-list::-webkit-scrollbar-corner { background: transparent; }
+        .meal-perm-list-header { display: flex; align-items: center; padding: 10px 12px; background: var(--bg-surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; gap: 10px; }
+        .meal-perm-list-header input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
+        .meal-perm-list-header .col-id { width: 90px; font-weight: 600; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; flex-shrink: 0; text-align: left; }
+        .meal-perm-list-header .col-name { width: 70px; font-weight: 600; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; flex-shrink: 0; text-align: left; }
+        .meal-perm-list-header .col-dept { width: 120px; font-weight: 600; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; flex-shrink: 0; text-align: left; }
+        .meal-perm-list-header .col-team { flex: 1; font-weight: 600; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; text-align: left; min-width: 0; }
+        .meal-perm-list-header .col-action { width: 60px; font-weight: 600; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; text-align: left; flex-shrink: 0; }
+        .meal-perm-list-item { display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; gap: 10px; }
+        .meal-perm-list-item:last-child { border-bottom: none; }
+        .meal-perm-list-item:hover { background: var(--bg-hover); }
+        .meal-perm-list-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
+        .meal-perm-list-item .col-id { width: 90px; font-weight: 600; font-size: 13px; flex-shrink: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .meal-perm-list-item .col-name { width: 70px; flex-shrink: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .meal-perm-list-item .col-dept { width: 120px; color: var(--text-secondary); font-size: 12px; flex-shrink: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .meal-perm-list-item .col-team { flex: 1; color: var(--text-secondary); font-size: 12px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .meal-perm-list-item .col-action { width: 60px; color: var(--text-secondary); font-size: 12px; flex-shrink: 0; text-align: left; }
+        .btn-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <div class="page-title">权限管理</div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary btn-sm" onclick="location.href='dashboard.html'">返回</button>
+                <button class="btn btn-primary btn-sm" id="addAdminBtn" onclick="showAddAdminModal()">+ 添加管理员</button>
+                <button class="btn btn-primary btn-sm" id="addS6Btn" style="display: none;" onclick="showAddS6Modal()">+ 添加6S权限</button>
+            </div>
+        </div>
+
+        <div class="perm-tabs">
+            <button class="perm-tab active" onclick="switchTab('admin')">管理员</button>
+            <button class="perm-tab" onclick="switchTab('exam')">考试权限</button>
+            <button class="perm-tab" onclick="switchTab('meal')">报餐权限</button>
+            <button class="perm-tab" onclick="switchTab('s6')">6S权限</button>
+            <button class="perm-tab" onclick="switchTab('file')">文件权限</button>
+        </div>
+
+        <!-- 管理员管理 -->
+        <div id="section-admin" class="perm-section active">
+            <div id="adminList" class="admin-list"></div>
+        </div>
+
+        <!-- 考试权限 -->
+        <div id="section-exam" class="perm-section">
+            <div class="toolbar" style="margin-bottom: 12px;">
+                <div style="font-size: 13px; color: var(--text-secondary);">点击考试名称查看/编辑权限人员</div>
+                <button class="btn btn-secondary btn-sm" onclick="showExamImportModal()">批量导入</button>
+            </div>
+            <div class="resource-list" id="examList"></div>
+        </div>
+
+        <!-- 报餐权限 -->
+        <div id="section-meal" class="perm-section">
+            <!-- 客餐权限全局配置 -->
+            <div class="meal-perm-card">
+                <div class="meal-perm-header">
+                    <div class="meal-perm-title">🍱 客餐权限配置</div>
+                    <button class="btn btn-primary btn-sm" onclick="saveGuestMealPermAll()">保存权限</button>
+                </div>
+                <div class="meal-perm-desc">配置哪些员工可以报客餐（访客/外部人员）</div>
+                <div class="meal-perm-stats">
+                    <div>
+                        <div class="stat-num" id="guestMealCount">0</div>
+                        <div class="stat-label">人有客餐权限</div>
+                    </div>
+                </div>
+                <div class="meal-perm-search">
+                    <input type="text" id="searchGuestMealKeyword" class="form-control" placeholder="搜索工号/姓名..." oninput="filterGuestMealStaff()">
+                    <select id="searchGuestMealDept" class="form-control" onchange="onDeptChange()">
+                        <option value="">全部部门</option>
+                    </select>
+                    <select id="searchGuestMealTeam" class="form-control" onchange="filterGuestMealStaff()">
+                        <option value="">全部班组</option>
+                    </select>
+                </div>
+                <div id="guestMealStaffList" class="meal-perm-list"></div>
+            </div>
+
+        </div>
+
+        <!-- 6S权限 -->
+        <div id="section-s6" class="perm-section">
+            <div id="s6StaffList" class="admin-list"></div>
+        </div>
+
+        <!-- 文件权限 -->
+        <div id="section-file" class="perm-section">
+            <div class="toolbar" style="margin-bottom: 12px;">
+                <div style="font-size: 13px; color: var(--text-secondary);">
+                    <strong>公共权限：</strong>按权限可见 | <strong>个人权限：</strong>仅可见自己上传的文件
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="showFilePublicImportModal()">公共批量导入</button>
+                    <button class="btn btn-secondary btn-sm" onclick="showFilePersonalImportModal()">个人批量导入</button>
+                </div>
+            </div>
+            <div class="resource-list">
+                <div class="resource-item open" onclick="toggleResource(this)">
+                    <div class="resource-header">
+                        <div class="resource-title">📁 公共文件权限</div>
+                        <div class="resource-arrow">▶</div>
+                    </div>
+                    <div class="resource-body" id="filePublicBody"></div>
+                </div>
+                <div class="resource-item" onclick="toggleResource(this)">
+                    <div class="resource-header">
+                        <div class="resource-title">👤 个人文件权限</div>
+                        <div class="resource-arrow">▶</div>
+                    </div>
+                    <div class="resource-body" id="filePersonalBody"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加管理员弹窗 -->
+    <div class="modal" id="adminModal">
+        <div class="modal-box" style="max-width: 340px; padding: 16px;">
+            <div class="modal-title" id="adminModalTitle">添加管理员</div>
+            <form onsubmit="handleAdminSave(event)">
+                <input type="hidden" id="adminId">
+                <div class="form-group">
+                    <label>工号 *</label>
+                    <input type="text" id="adminEmployeeId" class="form-control" required placeholder="员工工号" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>姓名</label>
+                    <input type="text" id="adminName" class="form-control" placeholder="输入姓名或工号自动匹配" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>密码 <span id="passwordHint" style="color: var(--text-secondary); font-weight: normal;">（至少6位）</span></label>
+                    <input type="password" id="adminPassword" class="form-control" required placeholder="登录密码">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="closeAdminModal()">取消</button>
+                    <button type="submit" class="btn btn-primary btn-sm" id="adminSaveBtn">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 6S权限添加弹窗 -->
+    <div class="modal" id="s6Modal">
+        <div class="modal-box" style="max-width: 340px; padding: 16px;">
+            <div class="modal-title" id="s6ModalTitle">添加6S权限</div>
+            <form onsubmit="handleAddS6Perm(event)">
+                <div class="form-group">
+                    <label>工号 *</label>
+                    <input type="text" id="s6EmployeeId" class="form-control" required placeholder="员工工号" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>姓名</label>
+                    <input type="text" id="s6EmployeeName" class="form-control" placeholder="输入姓名或工号自动匹配" autocomplete="off">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="closeS6Modal()">取消</button>
+                    <button type="submit" class="btn btn-primary btn-sm" id="s6SaveBtn">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 考试权限弹窗 -->
+    <div class="modal" id="examModal">
+        <div class="modal-box">
+            <div class="modal-title" id="examModalTitle">
+                <span>考试权限设置</span>
+                <div style="display:flex;gap:8px;margin-left:auto;">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="saveExamPerm()">保存</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="closeExamModal()">取消</button>
+                </div>
+            </div>
+            <div id="examStaffList"></div>
+        </div>
+    </div>
+
+    <!-- 考试批量导入弹窗 -->
+    <div class="modal" id="examImportModal">
+        <div class="modal-box">
+            <div class="modal-title">批量导入考试权限</div>
+            <div style="margin-bottom: 12px; display: flex; gap: 10px;">
+                <button class="btn btn-secondary btn-sm" onclick="downloadExamTemplate()">📥 下载模板</button>
+                <label class="btn btn-secondary btn-sm" style="cursor: pointer;">
+                    📤 上传文件
+                    <input type="file" accept=".csv,.xlsx,.xls" style="display: none;" id="examFileInput" onchange="handleExamFileUpload(this)">
+                </label>
+            </div>
+            <div class="form-group">
+                <label>或粘贴数据（CSV格式）</label>
+                <textarea class="import-area" id="examImportData" placeholder="工号,姓名
+A001,张三
+A002,李四
+A003,王五"></textarea>
+                <div class="import-help">格式：工号,姓名（每行一个，有考试权限的员工）</div>
+            </div>
+            <div class="import-result" id="examImportResult"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeExamImportModal()">取消</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="handleExamImport()">导入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文件公共权限批量导入弹窗 -->
+    <div class="modal" id="filePublicImportModal">
+        <div class="modal-box">
+            <div class="modal-title">批量导入公共文件权限</div>
+            <div style="margin-bottom: 12px; display: flex; gap: 10px;">
+                <button class="btn btn-secondary btn-sm" onclick="downloadFilePublicTemplate()">📥 下载模板</button>
+                <label class="btn btn-secondary btn-sm" style="cursor: pointer;">
+                    📤 上传文件
+                    <input type="file" accept=".csv,.xlsx,.xls" style="display: none;" id="filePublicFileInput" onchange="handleFilePublicFileUpload(this)">
+                </label>
+            </div>
+            <div class="form-group">
+                <label>粘贴数据（CSV格式）</label>
+                <textarea class="import-area" id="filePublicImportData" placeholder="工号,姓名,可见(0/1),读写(0/1),下载(0/1)
+A001,张三,1,1,0
+A002,李四,1,0,1"></textarea>
+                <div class="import-help">格式：工号,姓名,可见,读写,下载（0=否，1=是）</div>
+            </div>
+            <div class="import-result" id="filePublicImportResult"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeFilePublicImportModal()">取消</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="handleFilePublicImport()">导入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文件个人权限批量导入弹窗 -->
+    <div class="modal" id="filePersonalImportModal">
+        <div class="modal-box">
+            <div class="modal-title">批量导入个人文件权限</div>
+            <div style="margin-bottom: 12px; display: flex; gap: 10px;">
+                <button class="btn btn-secondary btn-sm" onclick="downloadFilePersonalTemplate()">📥 下载模板</button>
+                <label class="btn btn-secondary btn-sm" style="cursor: pointer;">
+                    📤 上传文件
+                    <input type="file" accept=".csv,.xlsx,.xls" style="display: none;" id="filePersonalFileInput" onchange="handleFilePersonalFileUpload(this)">
+                </label>
+            </div>
+            <div class="form-group">
+                <label>粘贴数据（CSV格式）</label>
+                <textarea class="import-area" id="filePersonalImportData" placeholder="工号,姓名,可见(0/1),读写(0/1),下载(0/1)
+A001,张三,1,1,1
+A002,李四,1,1,0"></textarea>
+                <div class="import-help">格式：工号,姓名,可见,读写,下载（0=否，1=是）</div>
+            </div>
+            <div class="import-result" id="filePersonalImportResult"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeFilePersonalImportModal()">取消</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="handleFilePersonalImport()">导入</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/xlsx.full.min.js"></script>
+    <script>
+        const API_URL = window.location.origin + '/api';
+        let token = localStorage.getItem('token');
+        let admins = [];
+        let currentTab = 'admin';
+        let currentExamId = null;
+        let allStaff = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!token) { window.location.href = 'admin/login.html'; return; }
+            loadAllData();
+            // 工号输入匹配姓名
+            document.getElementById('adminEmployeeId').addEventListener('blur', async function() {
+                const empId = this.value.trim();
+                if (!empId || this.disabled) return;
+                try {
+                    const res = await fetch(`${API_URL}/staff?search=${encodeURIComponent(empId)}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.code === 0 && data.data && data.data.length > 0) {
+                        const matched = data.data.find(s => s.employee_id === empId);
+                        const staff = matched || data.data[0];
+                        document.getElementById('adminName').value = staff.name || '';
+                    }
+                } catch (e) { /* ignore */ }
+            });
+            // 姓名输入匹配工号
+            document.getElementById('adminName').addEventListener('blur', async function() {
+                const name = this.value.trim();
+                if (!name || this.disabled) return;
+                try {
+                    const res = await fetch(`${API_URL}/staff?search=${encodeURIComponent(name)}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.code === 0 && data.data && data.data.length > 0) {
+                        const matched = data.data.find(s => s.name === name);
+                        const staff = matched || data.data[0];
+                        document.getElementById('adminEmployeeId').value = staff.employee_id || '';
+                    }
+                } catch (e) { /* ignore */ }
+            });
+        });
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.perm-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.perm-tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.querySelectorAll('.perm-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(`section-${tab}`).classList.add('active');
+            // 只在对应标签页显示添加按钮
+            document.getElementById('addAdminBtn').style.display = tab === 'admin' ? '' : 'none';
+            document.getElementById('addS6Btn').style.display = tab === 's6' ? '' : 'none';
+        }
+
+        async function loadAllData() {
+            await Promise.all([
+                loadAdmins(),
+                loadExamPerms(),
+                loadGuestMealPerms(),
+                loadS6Perms(),
+                loadFilePublicPerms(),
+                loadFilePersonalPerms()
+            ]);
+        }
+
+        // ============ 管理员管理 ============
+        async function loadAdmins() {
+            try {
+                const res = await fetch(`${API_URL}/admin/list`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.code === 0) {
+                    admins = data.data || [];
+                    renderAdminList();
+                }
+            } catch (err) { console.error('加载管理员失败:', err); }
+        }
+
+        function renderAdminList() {
+            const list = document.getElementById('adminList');
+            if (admins.length === 0) {
+                list.innerHTML = '<div class="empty-state">暂无管理员</div>'; return;
+            }
+            list.innerHTML = admins.map(admin => `
+                <div class="admin-item">
+                    <div class="admin-info">
+                        <div class="admin-avatar">${(admin.nickname || '管').charAt(0)}</div>
+                        <div><div class="admin-name">${admin.nickname || admin.username}</div><div style="font-size:12px;color:var(--text-secondary)">工号: ${admin.username}</div></div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary btn-sm" onclick="editAdmin(${admin.id})">编辑</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteAdmin(${admin.id})" ${admin.id === 1 ? 'disabled' : ''}>删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showAddAdminModal() {
+            document.getElementById('adminId').value = '';
+            document.getElementById('adminModalTitle').textContent = '添加管理员';
+            document.getElementById('adminEmployeeId').value = '';
+            document.getElementById('adminEmployeeId').disabled = false;
+            document.getElementById('adminName').value = '';
+            document.getElementById('adminPassword').value = '';
+            document.getElementById('adminPassword').required = true;
+            document.getElementById('passwordHint').style.display = '';
+            document.getElementById('adminModal').classList.add('active');
+        }
+
+        function editAdmin(id) {
+            const admin = admins.find(a => a.id === id);
+            if (!admin) return;
+            document.getElementById('adminId').value = admin.id;
+            document.getElementById('adminModalTitle').textContent = '编辑管理员';
+            document.getElementById('adminEmployeeId').value = admin.username;
+            document.getElementById('adminEmployeeId').disabled = true;
+            document.getElementById('adminName').value = admin.nickname || '';
+            document.getElementById('adminPassword').value = '';
+            document.getElementById('adminPassword').required = false;
+            document.getElementById('passwordHint').style.display = 'none';
+            document.getElementById('adminModal').classList.add('active');
+        }
+
+        function closeAdminModal() { document.getElementById('adminModal').classList.remove('active'); }
+
+        async function handleAdminSave(e) {
+            e.preventDefault();
+            const id = document.getElementById('adminId').value;
+            const data = {
+                username: document.getElementById('adminEmployeeId').value,
+                nickname: document.getElementById('adminName').value
+            };
+            if (!id) data.password = document.getElementById('adminPassword').value;
+            const btn = document.getElementById('adminSaveBtn');
+            btn.textContent = '保存中...'; btn.disabled = true;
+            try {
+                const url = id ? `${API_URL}/admin/${id}/update` : `${API_URL}/admin/add`;
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                const resData = await res.json();
+                if (resData.code === 0) {
+                    alert(id ? '更新成功' : '添加成功');
+                    closeAdminModal();
+                    loadAdmins();
+                } else { alert(resData.msg || '操作失败'); }
+            } catch (err) { alert('操作失败'); }
+            btn.textContent = '保存'; btn.disabled = false;
+        }
+
+        async function deleteAdmin(id) {
+            if (!confirm('确定删除此管理员？')) return;
+            try {
+                const res = await fetch(`${API_URL}/admin/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.code === 0) { alert('删除成功'); loadAdmins(); }
+                else { alert(data.msg || '删除失败'); }
+            } catch (err) { alert('删除失败'); }
+        }
+
+        // ============ 考试权限 ============
+        async function loadExamPerms() {
+            try {
+                const res = await fetch(`${API_URL}/permissions/exams`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.code === 0) {
+                    renderExamList(data.data);
+                }
+            } catch (err) { console.error('加载考试权限失败:', err); }
+        }
+
+        function renderExamList(exams) {
+            const list = document.getElementById('examList');
+            if (!exams || exams.length === 0) {
+                list.innerHTML = '<div class="empty-state">暂无考试</div>'; return;
+            }
+            list.innerHTML = exams.map(exam => `
+                <div class="resource-item" onclick="openExamModal(${exam.id}, '${exam.title.replace(/'/g, "\\'")}')">
+                    <div class="resource-header">
+                        <div>
+                            <div class="resource-title">📝 ${exam.title}</div>
+                            <div class="resource-meta">时长: ${exam.duration}分钟 | 及格: ${exam.pass_score}分</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="perm-count">${exam.perm_count || 0}人已授权</span>
+                            <span class="resource-arrow">▶</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function openExamModal(examId, examTitle) {
+            currentExamId = examId;
+            document.getElementById('examModalTitle').textContent = `考试权限: ${examTitle}`;
+            document.getElementById('examStaffList').innerHTML = '<div class="loading">加载中...</div>';
+            document.getElementById('examModal').classList.add('active');
+
+            try {
+                const res = await fetch(`${API_URL}/permissions/exams/${examId}/staff`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.code === 0) {
+                    renderExamStaffList(data.data);
+                }
+            } catch (err) { document.getElementById('examStaffList').innerHTML = '<div class="empty-state">加载失败</div>'; }
+        }
+
+        function renderExamStaffList(staff) {
+            allStaff = staff;
+            const selected = staff.filter(s => s.has_perm == 1);
+            const selectAll = selected.length === staff.length;
+
+            let html = `
+                <div class="select-all-row">
+                    <input type="checkbox" id="selectAllExam" ${selectAll ? 'checked' : ''} onchange="toggleAllExam(this)">
+                    <label for="selectAllExam">全选</label>
+                    <span style="margin-left: auto; font-size: 12px; color: var(--text-secondary);">
+                        已选 <span id="examSelectedCount">${selected.length}</span>/<span id="examTotalCount">${staff.length}</span> 人
+                    </span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead><tr><th>工号</th><th>姓名</th><th>部门</th><th>权限</th></tr></thead>
+                        <tbody>
+                            ${staff.map(s => `
+                                <tr>
+                                    <td>${s.employee_id || '-'}</td>
+                                    <td>${s.name || '-'}</td>
+                                    <td>${s.department || '-'}</td>
+                                    <td>
+                                        <input type="checkbox" class="exam-perm-check" value="${s.id}" data-staff-id="${s.id}" ${s.has_perm == 1 ? 'checked' : ''} onchange="updateExamCount()">
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('examStaffList').innerHTML = html;
+        }
+
+        function toggleAllExam(checkbox) {
+            document.querySelectorAll('.exam-perm-check').forEach(c => c.checked = checkbox.checked);
+            updateExamCount();
+        }
+
+        function updateExamCount() {
+            const checked = document.querySelectorAll('.exam-perm-check:checked').length;
+            const total = document.querySelectorAll('.exam-perm-check').length;
+            document.getElementById('examSelectedCount').textContent = checked;
+            document.getElementById('examTotalCount').textContent = total;
+        }
+
+        function closeExamModal() { document.getElementById('examModal').classList.remove('active'); }
+
+        async function saveExamPerm() {
+            const selected = Array.from(document.querySelectorAll('.exam-perm-check:checked')).map(c => parseInt(c.value));
+            try {
+                const res = await fetch(`${API_URL}/permissions/exams/${currentExamId}/staff`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ staff_ids: selected })
+                });
+                const data = await res.json();
+                if (data.code === 0) {
+                    alert('保存成功');
+                    closeExamModal();
+                    loadExamPerms();
+                } else { alert(data.msg || '保存失败'); }
+            } catch (err) { alert('保存失败'); }
+        }
+
+        function showExamImportModal() {
+            document.getElementById('examImportData').value = '';
+            document.getElementById('examImportResult').className = 'import-result';
+            document.getElementById('examImportResult').textContent = '';
+            document.getElementById('examImportModal').classList.add('active');
+        }
+
+        function closeExamImportModal() { document.getElementById('examImportModal').classList.remove('active'); }
+
+        async function handleExamImport() {
+            const text = document.getElementById('examImportData').value.trim();
+            if (!text) { alert('请粘贴数据'); return; }
+            const lines = text.split('\n').filter(l => l.trim());
+            const data = [];
+            for (let i = 0; i < lines.length; i++) {
+                const parts = lines[i].split(',').map(p => p.trim());
+                if (parts.length >= 1 && parts[0]) {
+                    data.push({ employee_id: parts[0], name: parts[1] || '' });
+                }
+            }
+            if (data.length === 0) {
+                document.getElementById('examImportResult').className = 'import-result error';
+                document.getElementById('examImportResult').textContent = '没有有效数据';
+                return;
+            }
+            try {
+                const res = await fetch(`${API_URL}/permissions/exams/batch`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data })
+                });
+                const resData = await res.json();
+                if (resData.code === 0) {
+                    const d = resData.data;
+                    let msg = `成功 ${d.success} 条`;
+                    if (d.fail > 0) {
+                        msg += `，失败 ${d.fail} 条`;
+                        if (d.errors && d.errors.length > 0) {
+                            msg += `\n错误列表：\n` + d.errors.map(e => `${e.employee_id || '(空)'}${e.name ? '(' + e.name + ')' : ''}: ${e.error}`).join('\n');
+                        }
+                    }
+                    document.getElementById('examImportResult').className = d.fail > 0 ? 'import-result error' : 'import-result success';
+                    document.getElementById('examImportResult').textContent = msg;
+                    if (d.fail === 0) {
+                        setTimeout(() => { closeExamImportModal(); loadExamPerms(); }, 1500);
+                    }
+                } else {
+                    document.getElementById('examImportResult').className = 'import-result error';
+                    document.getElementById('examImportResult').textContent = resData.msg || '导入失败';
+                }
+            } catch (err) {
+                document.getElementById('examImportResult').className = 'import-result error';
+                document.getElementById('examImportResult').textContent = '导入失败';
+            }
+        }
+
+        // ============ 客餐权限 ============
+        let allGuestMealStaff = [];
+
+        async function loadGuestMealPerms() {
+            try {
+                const res = await fetch(`${API_URL}/meal/guest-permissions`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.code === 0) {
+                    allGuestMealStaff = data.data.staff || [];
+                    document.getElementById('guestMealCount').textContent = data.data.withPermission || 0;
+                    // 填充部门和班组下拉选项
+                    populateDeptTeamDropdowns();
+                    renderGuestMealList(allGuestMealStaff);
+                }
+            } catch (err) { console.error('加载客餐权限失败:', err); }
+        }
+
+        function populateDeptTeamDropdowns() {
+            // 提取唯一的部门
+            const depts = [...new Set(allGuestMealStaff.map(s => s.department).filter(d => d))].sort();
+            const deptSelect = document.getElementById('searchGuestMealDept');
+            deptSelect.innerHTML = '<option value="">全部部门</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
+            // 班组下拉在onDeptChange中动态更新
+        }
+
+        function onDeptChange() {
+            const dept = document.getElementById('searchGuestMealDept').value;
+            const teamSelect = document.getElementById('searchGuestMealTeam');
+
+            // 根据选中的部门筛选班组
+            let teams;
+            if (dept === '') {
+                teams = [...new Set(allGuestMealStaff.map(s => s.team).filter(t => t))].sort();
+            } else {
+                teams = [...new Set(allGuestMealStaff.filter(s => s.department === dept).map(s => s.team).filter(t => t))].sort();
+            }
+
+            teamSelect.innerHTML = '<option value="">全部班组</option>' + teams.map(t => `<option value="${t}">${t}</option>`).join('');
+            filterGuestMealStaff();
+        }
+
+        function renderGuestMealList(staff) {
+            const list = document.getElementById('guestMealStaffList');
+            if (staff.length === 0) {
+                list.innerHTML = '<div class="empty-state" style="padding: 20px;">暂无员工数据</div>';
+                return;
+            }
+            const selectedCount = staff.filter(s => s.guest_meal_permission == 1).length;
+            const allSelected = selectedCount === staff.length && staff.length > 0;
+
+            let html = `
+                <div class="meal-perm-list-header">
+                    <input type="checkbox" id="selectAllGuestMeal" ${allSelected ? 'checked' : ''} onchange="toggleAllGuestMeal(this)">
+                    <span class="col-id">工号</span>
+                    <span class="col-name">姓名</span>
+                    <span class="col-dept">部门</span>
+                    <span class="col-team">班组</span>
+                </div>
+            `;
+            html += staff.map(s => `
+                <label class="meal-perm-list-item">
+                    <input type="checkbox" class="guest-meal-check" value="${s.id}" data-staff-id="${s.id}" ${s.guest_meal_permission == 1 ? 'checked' : ''} onchange="updateGuestMealPermCount()">
+                    <span class="col-id">${s.employee_id}</span>
+                    <span class="col-name">${s.name || ''}</span>
+                    <span class="col-dept">${s.department || ''}</span>
+                    <span class="col-team">${s.team || ''}</span>
+                </label>
+            `).join('');
+            list.innerHTML = html;
+        }
+
+        function filterGuestMealStaff() {
+            const keyword = document.getElementById('searchGuestMealKeyword').value.toLowerCase();
+            const dept = document.getElementById('searchGuestMealDept').value;
+            const team = document.getElementById('searchGuestMealTeam').value;
+            const filtered = allGuestMealStaff.filter(s =>
+                (keyword === '' || (s.employee_id && s.employee_id.toLowerCase().includes(keyword)) || (s.name && s.name.toLowerCase().includes(keyword))) &&
+                (dept === '' || s.department === dept) &&
+                (team === '' || s.team === team)
+            );
+            renderGuestMealList(filtered);
+        }
+
+        function toggleAllGuestMeal(checkbox) {
+            document.querySelectorAll('.guest-meal-check').forEach(c => c.checked = checkbox.checked);
+            updateGuestMealPermCount();
+        }
+
+        function updateGuestMealPermCount() {
+            const checked = document.querySelectorAll('.guest-meal-check:checked').length;
+            document.getElementById('guestMealCount').textContent = checked;
+            // Update select all state
+            const total = document.querySelectorAll('.guest-meal-check').length;
+            document.getElementById('selectAllGuestMeal').checked = checked === total && total > 0;
+        }
+
+        function saveGuestMealPermAll() {
+            const selectedIds = Array.from(document.querySelectorAll('.guest-meal-check:checked')).map(cb => parseInt(cb.value));
+            document.getElementById('guestMealCount').textContent = selectedIds.length;
+            saveGuestMealPerm(selectedIds);
+        }
+
+        async function updateGuestMealPerm(staffId) {
+            // 单个勾选变化时更新
+            updateGuestMealPermCount();
+            const selectedIds = Array.from(document.querySelectorAll('.guest-meal-check:checked')).map(cb => parseInt(cb.value));
+            await saveGuestMealPerm(selectedIds);
+        }
+
+        async function saveGuestMealPerm(selectedIds) {
+            try {
+                const res = await fetch(`${API_URL}/meal/guest-permissions`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ staff_ids: selectedIds, enabled: true })
+                });
+                const data = await res.json();
+                if (data.code === 0) {
+                    // 更新本地数据
+                    allGuestMealStaff.forEach(s => {
+                        s.guest_meal_permission = selectedIds.includes(s.id) ? 1 : 0;
+                    });
+                    alert('保存成功');
+                } else {
+                    alert(data.msg || '保存失败');
+                    loadGuestMealPerms();
+                }
+            } catch (err) {
+                alert('保存失败');
+                loadGuestMealPerms();
+            }
+        }
+
+        // ============ 6S权限 ============
+        let allS6Staff = [];
+
+        async function loadS6Perms() {
+            try {
+                const res = await fetch(`${API_URL}/permissions/s6`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.code === 0) {
+                    allS6Staff = data.data || [];
+                    renderS6List(allS6Staff);
+                }
+            } catch (err) { console.error('加载6S权限失败:', err); }
+        }
+
+        function renderS6List(staff) {
+            const list = document.getElementById('s6StaffList');
+            const staffWithPerm = staff.filter(s => s.has_perm == 1);
+
+            if (staffWithPerm.length === 0) {
+                list.innerHTML = '<div class="empty-state">暂无6S权限员工</div>';
+                return;
+            }
+
+            list.innerHTML = staffWithPerm.map(s => `
+                <div class="admin-item">
+                    <div class="admin-info">
+                        <div class="admin-avatar">${(s.name || '6').charAt(0)}</div>
+                        <div><div class="admin-name">${s.name || s.employee_id}</div><div style="font-size:12px;color:var(--text-secondary)">工号: ${s.employee_id} | 部门: ${s.department || '-'}</div></div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-danger btn-sm" onclick="deleteS6Perm(${s.id})">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showAddS6Modal() {
+            document.getElementById('s6EmployeeId').value = '';
+            document.getElementById('s6EmployeeName').value = '';
+            document.getElementById('s6Modal').classList.add('active');
+        }
+
+        function closeS6Modal() {
+            document.getElementById('s6Modal').classList.remove('active');
+        }
+
+        // 工号输入匹配姓名
+        document.getElementById('s6EmployeeId').addEventListener('blur', async function() {
+            const empId = this.value.trim();
+            if (!empId) return;
+            try {
+                const res = await fetch(`${API_URL}/staff?search=${encodeURIComponent(empId)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.code === 0 && data.data && data.data.length > 0) {
+                    const matched = data.data.find(s => s.employee_id === empId);
+                    const staff = matched || data.data[0];
+                    document.getElementById('s6EmployeeName').value = staff.name || '';
+                }
+            } catch (e) { /* ignore */ }
+        });
+
+        // 姓名输入匹配工号
+        document.getElementById('s6EmployeeName').addEventListener('blur', async function() {
+            const name = this.value.trim();
+            if (!name) return;
+            try {
+                const res = await fetch(`${API_URL}/staff?search=${encodeURIComponent(name)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.code === 0 && data.data && data.data.length > 0) {
+                    const matched = data.data.find(s => s.name === name);
+                    const staff = matched || data.data[0];
+                    document.getElementById('s6EmployeeId').value = staff.employee_id || '';
+                }
+            } catch (e) { /* ignore */ }
+        });
+
+        async function lookupS6Employee() {
+            // 保留兼容性，实际用上面的blur事件处理
+        }
+
+        async function handleAddS6Perm(e) {
+            e.preventDefault();
+            const employeeId = document.getElementById('s6EmployeeId').value.trim();
+            const employeeNameEl = document.getElementById('s6EmployeeName');
+            if (!employeeId) {
+                alert('请输入工号');
+                return;
+            }
+            try {
+                // 先查找员工
+                const searchRes = await fetch(`${API_URL}/staff?search=${encodeURIComponent(employeeId)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const searchData = await searchRes.json();
+                if (searchData.code !== 0 || !searchData.data || searchData.data.length === 0) {
+                    alert('员工不存在');
+                    return;
+                }
+                const matched = searchData.data.find(s => s.employee_id === employeeId);
+                const staff = matched || searchData.data[0];
+
+                // 显示匹配的姓名
+                employeeNameEl.value = staff.name || '';
+
+                const staffId = staff.id;
+
+                if (allS6Staff.find(s => s.id === staffId && s.has_perm == 1)) {
+                    alert('该员工已有6S权限');
+                    return;
+                }
+
+                // 使用 POST /permissions/s6 添加单个员工6S权限
+                const res = await fetch(`${API_URL}/permissions/s6`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ staff_id: staffId })
+                });
+                const data = await res.json();
+                if (data.code === 0) {
+                    alert('添加成功');
+                    closeS6Modal();
+                    loadS6Perms();
+                } else {
+                    alert(data.msg || '添加失败');
+                }
+            } catch (err) {
+                console.error('添加6S权限失败:', err);
+                alert('添加失败');
+            }
+        }
+
+        async function deleteS6Perm(staffId) {
+            if (!confirm('确定删除该员工的6S权限？')) return;
+            try {
+                // Get all staff IDs except the one to delete
+                const currentIds = allS6Staff.filter(s => s.has_perm == 1).map(s => s.id);
+                const newIds = currentIds.filter(id => id !== staffId);
+                const res = await fetch(`${API_URL}/permissions/s6`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ staff_ids: newIds })
+                });
+                const data = await res.json();
+                if (data.code === 0) {
+                    alert('删除成功');
+                    loadS6Perms();
+                } else {
+                    alert(data.msg || '删除失败');
+                }
+            } catch (err) {
+                alert('删除失败');
+            }
+        }
+
+        // ============ 文件权限 ============
+        async function loadFilePublicPerms() {
+            try {
+                const res = await fetch(`${API_URL}/permissions/files/public`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.code === 0) {
+                    renderFilePublicPerms(data.data);
+                }
+            } catch (err) { console.error('加载文件公共权限失败:', err); }
+        }
+
+        function renderFilePublicPerms(staff) {
+            let html = `
+                <div class="select-all-row" style="margin-bottom: 16px;">
+                    <span style="font-weight: 600;">公共权限说明：</span>
+                    <span style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">
+                        可见=按复选框权限可见 | 只读=可预览不可修改下载 | 读写=可上传修改不可下载 | 下载=可下载文件
+                    </span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead><tr><th>工号</th><th>姓名</th><th>可见</th><th>只读</th><th>读写</th><th>下载</th></tr></thead>
+                        <tbody>
+                            ${staff.map(s => `
+                                <tr>
+                                    <td>${s.employee_id || '-'}</td>
+                                    <td>${s.name || '-'}</td>
+                                    <td><input type="checkbox" class="fp-read" value="${s.id}" ${s.can_read == 1 ? 'checked' : ''} onchange="updateFilePublicPerm(${s.id})"></td>
+                                    <td><input type="checkbox" class="fp-write" value="${s.id}" ${s.can_write == 1 ? 'checked' : ''} onchange="updateFilePublicPerm(${s.id})" disabled></td>
+                                    <td><input type="checkbox" class="fp-write" value="${s.id}" ${s.can_write == 1 ? 'checked' : ''} onchange="updateFilePublicPerm(${s.id})"></td>
+                                    <td><input type="checkbox" class="fp-download" value="${s.id}" ${s.can_download == 1 ? 'checked' : ''} onchange="updateFilePublicPerm(${s.id})"></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('filePublicBody').innerHTML = html;
+        }
+
+        async function updateFilePublicPerm(staffId) {
+            const readEl = document.querySelector(`.fp-read[value="${staffId}"]`);
+            const writeEl = document.querySelector(`.fp-write[value="${staffId}"]`);
+            const downloadEl = document.querySelector(`.fp-download[value="${staffId}"]`);
+
+            const perm = {
+                staff_id: staffId,
+                can_read: readEl.checked ? 1 : 0,
+                can_write: writeEl.checked ? 1 : 0,
+                can_download: downloadEl.checked ? 1 : 0
+            };
+
+            try {
+                await fetch(`${API_URL}/permissions/files/public`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ permissions: [perm] })
+                });
+            } catch (err) { console.error('更新文件权限失败:', err); }
+        }
+
+        async function loadFilePersonalPerms() {
+            try {
+                const res = await fetch(`${API_URL}/permissions/files/personal`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.code === 0) {
+                    renderFilePersonalPerms(data.data);
+                }
+            } catch (err) { console.error('加载文件个人权限失败:', err); }
+        }
+
+        function renderFilePersonalPerms(staff) {
+            let html = `
+                <div class="select-all-row" style="margin-bottom: 16px;">
+                    <span style="font-weight: 600;">个人权限说明：</span>
+                    <span style="font-size: 12px; color: var(--text-secondary); margin-left: 8px;">
+                        仅可见自己上传的文件，默认全部开启
+                    </span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead><tr><th>工号</th><th>姓名</th><th>可见</th><th>读写</th><th>下载</th></tr></thead>
+                        <tbody>
+                            ${staff.map(s => `
+                                <tr>
+                                    <td>${s.employee_id || '-'}</td>
+                                    <td>${s.name || '-'}</td>
+                                    <td><input type="checkbox" class="fper-read" value="${s.id}" ${s.can_read == 1 ? 'checked' : ''} onchange="updateFilePersonalPerm(${s.id})"></td>
+                                    <td><input type="checkbox" class="fper-write" value="${s.id}" ${s.can_write == 1 ? 'checked' : ''} onchange="updateFilePersonalPerm(${s.id})"></td>
+                                    <td><input type="checkbox" class="fper-download" value="${s.id}" ${s.can_download == 1 ? 'checked' : ''} onchange="updateFilePersonalPerm(${s.id})"></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('filePersonalBody').innerHTML = html;
+        }
+
+        async function updateFilePersonalPerm(staffId) {
+            const readEl = document.querySelector(`.fper-read[value="${staffId}"]`);
+            const writeEl = document.querySelector(`.fper-write[value="${staffId}"]`);
+            const downloadEl = document.querySelector(`.fper-download[value="${staffId}"]`);
+
+            const perm = {
+                staff_id: staffId,
+                can_read: readEl.checked ? 1 : 0,
+                can_write: writeEl.checked ? 1 : 0,
+                can_download: downloadEl.checked ? 1 : 0
+            };
+
+            try {
+                await fetch(`${API_URL}/permissions/files/personal`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ permissions: [perm] })
+                });
+            } catch (err) { console.error('更新文件个人权限失败:', err); }
+        }
+
+        // ============ 文件权限批量导入 ============
+        function showFilePublicImportModal() {
+            document.getElementById('filePublicImportData').value = '';
+            document.getElementById('filePublicImportResult').className = 'import-result';
+            document.getElementById('filePublicImportResult').textContent = '';
+            document.getElementById('filePublicImportModal').classList.add('active');
+        }
+        function closeFilePublicImportModal() { document.getElementById('filePublicImportModal').classList.remove('active'); }
+        function downloadFilePublicTemplate() {
+            const data = [['工号', '姓名', '可见(0/1)', '读写(0/1)', '下载(0/1)'], ['A001', '张三', 1, 1, 0], ['A002', '李四', 1, 0, 1]];
+            downloadXLSX(data, '公共文件权限导入模板.xlsx');
+        }
+        async function handleFilePublicImport() {
+            const text = document.getElementById('filePublicImportData').value.trim();
+            if (!text) { alert('请粘贴数据'); return; }
+            const lines = text.split('\n').filter(l => l.trim());
+            const permissions = [];
+            for (let i = 0; i < lines.length; i++) {
+                const parts = lines[i].split(',').map(p => p.trim());
+                if (parts.length >= 5) {
+                    permissions.push({
+                        employee_id: parts[0],
+                        name: parts[1] || '',
+                        can_read: parts[2] === '1' ? 1 : 0,
+                        can_write: parts[3] === '1' ? 1 : 0,
+                        can_download: parts[4] === '1' ? 1 : 0
+                    });
+                }
+            }
+            if (permissions.length === 0) {
+                document.getElementById('filePublicImportResult').className = 'import-result error';
+                document.getElementById('filePublicImportResult').textContent = '没有有效数据';
+                return;
+            }
+            try {
+                const res = await fetch(`${API_URL}/permissions/files/public/batch`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ permissions })
+                });
+                const resData = await res.json();
+                if (resData.code === 0) {
+                    const d = resData.data;
+                    let msg = `成功 ${d.success} 条`;
+                    if (d.fail > 0) {
+                        msg += `，失败 ${d.fail} 条`;
+                        if (d.errors && d.errors.length > 0) {
+                            msg += `\n错误列表：\n` + d.errors.map(e => `${e.employee_id || '(空)'}${e.name ? '(' + e.name + ')' : ''}: ${e.error}`).join('\n');
+                        }
+                    }
+                    document.getElementById('filePublicImportResult').className = d.fail > 0 ? 'import-result error' : 'import-result success';
+                    document.getElementById('filePublicImportResult').textContent = msg;
+                    if (d.fail === 0) {
+                        setTimeout(() => { closeFilePublicImportModal(); loadFilePublicPerms(); }, 1500);
+                    }
+                } else {
+                    document.getElementById('filePublicImportResult').className = 'import-result error';
+                    document.getElementById('filePublicImportResult').textContent = resData.msg || '导入失败';
+                }
+            } catch (err) {
+                document.getElementById('filePublicImportResult').className = 'import-result error';
+                document.getElementById('filePublicImportResult').textContent = '导入失败';
+            }
+        }
+
+        function showFilePersonalImportModal() {
+            document.getElementById('filePersonalImportData').value = '';
+            document.getElementById('filePersonalImportResult').className = 'import-result';
+            document.getElementById('filePersonalImportResult').textContent = '';
+            document.getElementById('filePersonalImportModal').classList.add('active');
+        }
+        function closeFilePersonalImportModal() { document.getElementById('filePersonalImportModal').classList.remove('active'); }
+        function downloadFilePersonalTemplate() {
+            const data = [['工号', '姓名', '可见(0/1)', '读写(0/1)', '下载(0/1)'], ['A001', '张三', 1, 1, 1], ['A002', '李四', 1, 1, 0]];
+            downloadXLSX(data, '个人文件权限导入模板.xlsx');
+        }
+        async function handleFilePersonalImport() {
+            const text = document.getElementById('filePersonalImportData').value.trim();
+            if (!text) { alert('请粘贴数据'); return; }
+            const lines = text.split('\n').filter(l => l.trim());
+            const permissions = [];
+            for (let i = 0; i < lines.length; i++) {
+                const parts = lines[i].split(',').map(p => p.trim());
+                if (parts.length >= 5) {
+                    permissions.push({
+                        employee_id: parts[0],
+                        name: parts[1] || '',
+                        can_read: parts[2] === '1' ? 1 : 0,
+                        can_write: parts[3] === '1' ? 1 : 0,
+                        can_download: parts[4] === '1' ? 1 : 0
+                    });
+                }
+            }
+            if (permissions.length === 0) {
+                document.getElementById('filePersonalImportResult').className = 'import-result error';
+                document.getElementById('filePersonalImportResult').textContent = '没有有效数据';
+                return;
+            }
+            try {
+                const res = await fetch(`${API_URL}/permissions/files/personal/batch`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ permissions })
+                });
+                const resData = await res.json();
+                if (resData.code === 0) {
+                    const d = resData.data;
+                    let msg = `成功 ${d.success} 条`;
+                    if (d.fail > 0) {
+                        msg += `，失败 ${d.fail} 条`;
+                        if (d.errors && d.errors.length > 0) {
+                            msg += `\n错误列表：\n` + d.errors.map(e => `${e.employee_id || '(空)'}${e.name ? '(' + e.name + ')' : ''}: ${e.error}`).join('\n');
+                        }
+                    }
+                    document.getElementById('filePersonalImportResult').className = d.fail > 0 ? 'import-result error' : 'import-result success';
+                    document.getElementById('filePersonalImportResult').textContent = msg;
+                    if (d.fail === 0) {
+                        setTimeout(() => { closeFilePersonalImportModal(); loadFilePersonalPerms(); }, 1500);
+                    }
+                } else {
+                    document.getElementById('filePersonalImportResult').className = 'import-result error';
+                    document.getElementById('filePersonalImportResult').textContent = resData.msg || '导入失败';
+                }
+            } catch (err) {
+                document.getElementById('filePersonalImportResult').className = 'import-result error';
+                document.getElementById('filePersonalImportResult').textContent = '导入失败';
+            }
+        }
+
+        // ============ 工具函数 ============
+        function downloadXLSX(data, filename) {
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+            XLSX.writeFile(wb, filename);
+        }
+
+        // ============ 文件上传处理 ============
+        function downloadExamTemplate() {
+            const data = [['工号', '姓名'], ['A001', '张三'], ['A002', '李四'], ['A003', '王五']];
+            downloadXLSX(data, '考试权限导入模板.xlsx');
+        }
+
+        function parseXLSX(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                        resolve(json);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = e => reject(e);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        async function handleExamFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            try {
+                const data = await parseXLSX(file);
+                // 转换为 CSV 格式文本
+                const text = data.map(row => row.join(',')).join('\n');
+                document.getElementById('examImportData').value = text;
+            } catch (err) {
+                alert('解析文件失败');
+            }
+            input.value = '';
+        }
+
+        async function handleFilePublicFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            try {
+                const data = await parseXLSX(file);
+                const text = data.map(row => row.join(',')).join('\n');
+                document.getElementById('filePublicImportData').value = text;
+            } catch (err) {
+                alert('解析文件失败');
+            }
+            input.value = '';
+        }
+
+        async function handleFilePersonalFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            try {
+                const data = await parseXLSX(file);
+                const text = data.map(row => row.join(',')).join('\n');
+                document.getElementById('filePersonalImportData').value = text;
+            } catch (err) {
+                alert('解析文件失败');
+            }
+            input.value = '';
+        }
+
+        function toggleResource(el) {
+            el.classList.toggle('open');
+        }
+    </script>
+</body>
+</html>

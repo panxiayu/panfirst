@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>今日报餐 - 兴利汽车模具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --ios-bg: #f2f2f7;
+            --ios-card: rgba(255,255,255,0.9);
+            --ios-blue: #007aff;
+            --ios-gray: #8e8e93;
+            --ios-radius: 20px;
+            --shadow: 0 3px 10px rgba(0,0,0,0.06);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+            color: #1c1c1e;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header .date {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .meal-card {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 28px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            backdrop-filter: blur(20px);
+        }
+
+        .meal-card.dinner {
+            background: rgba(255,255,255,0.95);
+        }
+
+        .meal-card.lunch {
+            background: rgba(255,255,255,0.85);
+        }
+
+        .meal-card.guest {
+            background: rgba(255,255,255,0.85);
+        }
+
+        .meal-icon {
+            font-size: 52px;
+            margin-bottom: 12px;
+        }
+
+        .meal-label {
+            font-size: 15px;
+            font-weight: 600;
+            opacity: 0.7;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .meal-count {
+            font-size: 64px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .meal-unit {
+            font-size: 18px;
+            font-weight: 500;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 12px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error-msg {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255,255,255,0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍚 今日报餐</h1>
+            <div class="date" id="currentDate"></div>
+        </div>
+
+        <div id="loading" class="loading">数据加载中...</div>
+        <div id="content" style="display: none;">
+            <!-- 晚餐（主展示） -->
+            <div class="meal-card dinner">
+                <div class="meal-icon">🍚</div>
+                <div class="meal-label">晚餐</div>
+                <div class="meal-count" id="dinnerCount">0</div>
+                <div class="meal-unit">份</div>
+            </div>
+
+            <!-- 午餐 -->
+            <div id="lunchCard" class="meal-card lunch" style="display: none;">
+                <div class="meal-icon">🍱</div>
+                <div class="meal-label">午餐</div>
+                <div class="meal-count" id="lunchCount">0</div>
+                <div class="meal-unit">份</div>
+            </div>
+
+            <!-- 客餐 -->
+            <div id="guestCard" class="meal-card guest" style="display: none;">
+                <div class="meal-icon">👥</div>
+                <div class="meal-label">客餐</div>
+                <div class="meal-count" id="guestCount">0</div>
+                <div class="meal-unit">份</div>
+            </div>
+        </div>
+
+        <div id="error" class="error-msg" style="display: none;">
+            暂无报餐数据
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin + '/api';
+
+        // 从URL获取token参数
+        function getTokenFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('token') || localStorage.getItem('employee_token') || '';
+        }
+
+        function getToday() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatDateDisplay() {
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const day = now.getDate();
+            const weekday = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][now.getDay()];
+            return `${month}月${day}日 ${weekday}`;
+        }
+
+        document.getElementById('currentDate').textContent = formatDateDisplay();
+
+        async function loadTodayStats() {
+            const today = getToday();
+            const token = getTokenFromUrl();
+
+            if (!token) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = '';
+                document.getElementById('error').textContent = '请先登录员工账号';
+                return;
+            }
+
+            try {
+                // 获取所有进行中的报餐活动
+                const res = await fetch(`${API}/meal/list`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.code !== 0 || !data.data || data.data.length === 0) {
+                    document.getElementById('content').style.display = '';
+                    document.getElementById('content').innerHTML = '<div class="error-msg">暂无报餐数据</div>';
+                    return;
+                }
+
+                // 获取今日报名统计
+                let lunchTotal = 0;
+                let dinnerTotal = 0;
+                let guestTotal = 0;
+
+                // 遍历所有活动获取统计
+                for (const meal of data.data) {
+                    try {
+                        const statsRes = await fetch(`${API}/meal/${meal.id}/statistics?date=${today}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const statsData = await statsRes.json();
+                        if (statsData.code === 0 && statsData.data) {
+                            const t = statsData.data.totals || statsData.data;
+                            lunchTotal += t.lunch_employee || 0;
+                            dinnerTotal += t.dinner_employee || 0;
+                            guestTotal += (t.lunch_guest || 0) + (t.dinner_guest || 0);
+                        }
+                    } catch (e) {
+                        console.error('获取统计失败:', e);
+                    }
+                }
+
+                // 显示统计
+                document.getElementById('content').style.display = '';
+
+                // 晚餐
+                document.getElementById('dinnerCount').textContent = dinnerTotal;
+
+                // 午餐（只在>0时显示）
+                if (lunchTotal > 0) {
+                    document.getElementById('lunchCard').style.display = '';
+                    document.getElementById('lunchCount').textContent = lunchTotal;
+                }
+
+                // 客餐（只在>0时显示）
+                if (guestTotal > 0) {
+                    document.getElementById('guestCard').style.display = '';
+                    document.getElementById('guestCount').textContent = guestTotal;
+                }
+
+            } catch (err) {
+                console.error('加载失败:', err);
+                document.getElementById('error').style.display = '';
+                document.getElementById('error').textContent = '加载失败，请刷新重试';
+            }
+        }
+
+        loadTodayStats();
+    </script>
+</body>
+</html>

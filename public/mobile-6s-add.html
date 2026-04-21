@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>新增曝光 - 兴利汽车模具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --ios-bg: #f2f2f7;
+            --ios-card: rgba(255,255,255,0.9);
+            --ios-blue: #007aff;
+            --ios-gray: #8e8e93;
+            --ios-radius: 16px;
+            --ios-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+            --transition: 0.3s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+            background: var(--ios-bg);
+            color: #1c1c1e;
+            padding-bottom: 100px;
+        }
+
+
+
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .ios-card {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 20px 24px;
+            margin-bottom: 12px;
+            box-shadow: var(--ios-shadow);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group:last-child { margin-bottom: 0; }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--ios-gray);
+            margin-bottom: 8px;
+        }
+        .form-label .required { color: #ff3b30; margin-left: 2px; }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            color: #1c1c1e;
+            transition: var(--transition);
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--ios-blue);
+            background: rgba(0,122,255,0.03);
+        }
+        .form-textarea {
+            min-height: 100px;
+            resize: none;
+        }
+
+        .image-section {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 20px 24px;
+            margin-bottom: 12px;
+            box-shadow: var(--ios-shadow);
+        }
+
+        .image-section-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .image-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .image-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .image-label {
+            font-size: 13px;
+            color: var(--ios-gray);
+            font-weight: 500;
+        }
+
+        .image-upload {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            border: 2px dashed rgba(0,0,0,0.12);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: rgba(0,0,0,0.02);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        .image-upload:active { transform: scale(0.98); }
+        .image-upload.has-image { border-style: solid; border-color: var(--ios-blue); }
+
+        .image-upload input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .upload-icon { font-size: 28px; }
+        .upload-text { font-size: 12px; color: var(--ios-gray); }
+
+        .image-upload img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .image-upload.has-image .remove-btn { display: flex; }
+        .image-upload.has-image .upload-placeholder { display: none; }
+
+        .btn-area {
+            display: flex;
+            gap: 12px;
+            padding: 0 16px;
+            position: fixed;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .ios-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .ios-btn:active { transform: scale(0.98); }
+        .ios-btn-secondary { background: rgba(0,0,0,0.06); color: var(--ios-gray); }
+        .ios-btn-primary { background: var(--ios-blue); color: white; }
+        .ios-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .loading-overlay.show { display: flex; }
+        .loading-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .toast {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            background: var(--ios-blue);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 10000;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="ios-card">
+            <div class="form-group">
+                <label class="form-label">项目编号<span class="required">*</span></label>
+                <input type="text" class="form-input" id="projectCode" placeholder="请输入项目编号">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">区域<span class="required">*</span></label>
+                <select class="form-select" id="area">
+                    <option value="">请选择区域</option>
+                    <option value="车间">车间</option>
+                    <option value="办公室">办公室</option>
+                    <option value="仓库">仓库</option>
+                    <option value="卫生间">卫生间</option>
+                    <option value="宿舍">宿舍</option>
+                    <option value="食堂">食堂</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">问题描述<span class="required">*</span></label>
+                <textarea class="form-textarea" id="description" placeholder="请描述发现的问题"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">责任人</label>
+                <input type="text" class="form-input" id="personCharge" placeholder="请输入责任人姓名">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">检查日期</label>
+                <input type="date" class="form-input" id="checkDate">
+            </div>
+        </div>
+
+        <div class="image-section">
+            <div class="image-section-title">整改照片</div>
+            <div class="image-row">
+                <div class="image-item">
+                    <div class="image-label">整改前照片</div>
+                    <div class="image-upload" id="beforeUpload">
+                        <input type="file" accept="image/*" capture="environment" id="beforeImage" onchange="handleImageSelect(this, 'before')">
+                        <div class="upload-placeholder">
+                            <div class="upload-icon">📷</div>
+                            <div class="upload-text">点击拍照</div>
+                        </div>
+                        <img id="beforePreview" style="display: none;">
+                        <button class="remove-btn" onclick="removeImage('before', event)">×</button>
+                    </div>
+                </div>
+                <div class="image-item">
+                    <div class="image-label">整改后照片</div>
+                    <div class="image-upload" id="afterUpload">
+                        <input type="file" accept="image/*" capture="environment" id="afterImage" onchange="handleImageSelect(this, 'after')">
+                        <div class="upload-placeholder">
+                            <div class="upload-icon">📷</div>
+                            <div class="upload-text">点击拍照</div>
+                        </div>
+                        <img id="afterPreview" style="display: none;">
+                        <button class="remove-btn" onclick="removeImage('after', event)">×</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="btn-area">
+        <button class="ios-btn ios-btn-secondary" onclick="goBack()">取消</button>
+        <button class="ios-btn ios-btn-primary" id="submitBtn" onclick="submitForm()">提交</button>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API = window.location.origin + '/api';
+        let token = localStorage.getItem('employee_token');
+
+        if (!token) {
+            window.location.href = 'index.html';
+        }
+
+        let beforeImageFile = null;
+        let afterImageFile = null;
+
+        function goBack() {
+            window.location.href = 'mobile-6s-list.html';
+        }
+
+        function handleImageSelect(input, type) {
+            const file = input.files[0];
+            if (!file) return;
+
+            if (type === 'before') {
+                beforeImageFile = file;
+            } else {
+                afterImageFile = file;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById(type + 'Preview');
+                const upload = document.getElementById(type + 'Upload');
+
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                upload.classList.add('has-image');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage(type, event) {
+            event.stopPropagation();
+            event.preventDefault();
+
+            const upload = document.getElementById(type + 'Upload');
+            const preview = document.getElementById(type + 'Preview');
+            const input = document.getElementById(type + 'Image');
+
+            input.value = '';
+            preview.src = '';
+            preview.style.display = 'none';
+            upload.classList.remove('has-image');
+
+            if (type === 'before') {
+                beforeImageFile = null;
+            } else {
+                afterImageFile = null;
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.add('show');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('show');
+        }
+
+        function validateForm() {
+            const projectCode = document.getElementById('projectCode').value.trim();
+            const area = document.getElementById('area').value;
+            const description = document.getElementById('description').value.trim();
+
+            if (!projectCode) { showToast('请输入项目编号'); return false; }
+            if (!area) { showToast('请选择区域'); return false; }
+            if (!description) { showToast('请输入问题描述'); return false; }
+            return true;
+        }
+
+        async function submitForm() {
+            if (!validateForm()) return;
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            showLoading();
+
+            try {
+                const formData = new FormData();
+                formData.append('project_code', document.getElementById('projectCode').value.trim());
+                formData.append('area', document.getElementById('area').value);
+                formData.append('description', document.getElementById('description').value.trim());
+                formData.append('person_charge', document.getElementById('personCharge').value.trim());
+                formData.append('check_date', document.getElementById('checkDate').value || null);
+                formData.append('status', 'pending');
+
+                if (beforeImageFile) formData.append('before_image', beforeImageFile);
+                if (afterImageFile) formData.append('after_image', afterImageFile);
+
+                const res = await fetch(API + '/6s', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: formData
+                });
+
+                const data = await res.json();
+                hideLoading();
+                submitBtn.disabled = false;
+
+                if (data.code === 0) {
+                    showToast('提交成功');
+                    setTimeout(() => window.location.href = 'mobile-6s-list.html', 1500);
+                } else {
+                    showToast(data.msg || '提交失败');
+                }
+            } catch (err) {
+                hideLoading();
+                submitBtn.disabled = false;
+                showToast('提交失败');
+            }
+        }
+
+        document.getElementById('checkDate').valueAsDate = new Date();
+    </script>
+</body>
+</html>

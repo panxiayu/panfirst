@@ -1,0 +1,154 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 底座渐变 - 淡紫色 -->
+    <linearGradient id="baseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#C9B8E8"/>
+      <stop offset="50%" stop-color="#B8A4DC"/>
+      <stop offset="100%" stop-color="#A390D0"/>
+    </linearGradient>
+
+    <!-- 纸张渐变 -->
+    <linearGradient id="paperGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F5F0FA"/>
+    </linearGradient>
+
+    <!-- 铅笔黄色 -->
+    <linearGradient id="pencilGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE066"/>
+      <stop offset="50%" stop-color="#FFD43B"/>
+      <stop offset="100%" stop-color="#FAB005"/>
+    </linearGradient>
+
+    <!-- 橡皮粉红 -->
+    <linearGradient id="eraserGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFB8D0"/>
+      <stop offset="100%" stop-color="#FF8FAB"/>
+    </linearGradient>
+
+    <!-- 金属环 -->
+    <linearGradient id="metalGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F0E6FF"/>
+      <stop offset="50%" stop-color="#D4C4F0"/>
+      <stop offset="100%" stop-color="#C0A8E0"/>
+    </linearGradient>
+
+    <!-- 红色分数 -->
+    <radialGradient id="redGrad" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FF6B6B"/>
+      <stop offset="100%" stop-color="#EE4444"/>
+    </radialGradient>
+
+    <!-- 高光 -->
+    <linearGradient id="gloss" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- 阴影 -->
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+    <filter id="dropShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#9080B0" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- 底座阴影 -->
+  <ellipse cx="64" cy="112" rx="38" ry="10" fill="#A390D0" opacity="0.3" filter="url(#softBlur)"/>
+
+  <!-- 圆角方形底座 -->
+  <rect x="12" y="12" width="104" height="104" rx="28" fill="url(#baseGrad)"/>
+  <rect x="12" y="12" width="104" height="104" rx="28" fill="url(#gloss)" opacity="0.3"/>
+
+  <!-- 试卷堆 - 后层 -->
+  <g transform="translate(22, 24) rotate(-10)">
+    <rect x="0" y="0" width="56" height="72" rx="4" fill="#E8E0F0"/>
+    <rect x="0" y="0" width="56" height="72" rx="4" fill="none" stroke="#D0C4E8" stroke-width="1"/>
+  </g>
+
+  <!-- 试卷堆 - 中层 -->
+  <g transform="translate(28, 20) rotate(-5)">
+    <rect x="0" y="0" width="56" height="72" rx="4" fill="#F0EAF8"/>
+    <rect x="0" y="0" width="56" height="72" rx="4" fill="none" stroke="#E0D4F0" stroke-width="1"/>
+  </g>
+
+  <!-- 试卷 - 前层 -->
+  <g transform="translate(34, 16)">
+    <!-- 阴影 -->
+    <rect x="4" y="4" width="56" height="72" rx="4" fill="#D0C4E8" opacity="0.4"/>
+
+    <!-- 主试卷 -->
+    <rect x="0" y="0" width="56" height="72" rx="4" fill="url(#paperGrad)"/>
+
+    <!-- 装订线区域 -->
+    <rect x="0" y="0" width="10" height="72" rx="3" fill="#F5F0FA"/>
+
+    <!-- 装订孔 -->
+    <circle cx="5" cy="12" r="3" fill="#E0D4F0"/>
+    <circle cx="5" cy="30" r="3" fill="#E0D4F0"/>
+    <circle cx="5" cy="48" r="3" fill="#E0D4F0"/>
+    <circle cx="5" cy="66" r="3" fill="#E0D4F0"/>
+
+    <!-- 红色提示条 -->
+    <rect x="14" y="12" width="34" height="4" rx="2" fill="#FFB8C8" opacity="0.7"/>
+
+    <!-- 题目线 -->
+    <rect x="16" y="22" width="24" height="3" rx="1.5" fill="#C0B0D8"/>
+    <rect x="16" y="30" width="30" height="2" rx="1" fill="#E0D4F0"/>
+    <rect x="16" y="36" width="26" height="2" rx="1" fill="#E0D4F0"/>
+
+    <!-- 选项 -->
+    <rect x="16" y="46" width="10" height="10" rx="3" fill="#FFFFFF" stroke="#D0C4E8" stroke-width="1.5"/>
+    <circle cx="21" cy="51" r="4" fill="#B8E8C0"/>
+    <path d="M18 51 L20 53 L24 49" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+
+    <rect x="16" y="60" width="10" height="10" rx="3" fill="#FFFFFF" stroke="#D0C4E8" stroke-width="1.5"/>
+  </g>
+
+  <!-- 铅笔 -->
+  <g transform="translate(80, 52) rotate(35)">
+    <!-- 阴影 -->
+    <rect x="3" y="3" width="12" height="52" rx="2" fill="#C4A000" opacity="0.25"/>
+
+    <!-- 笔身 -->
+    <rect x="0" y="0" width="12" height="44" rx="2" fill="url(#pencilGrad)"/>
+
+    <!-- 笔身高光 -->
+    <rect x="2" y="0" width="4" height="44" fill="#FFFFFF" opacity="0.35"/>
+
+    <!-- 金属环 -->
+    <rect x="0" y="40" width="12" height="8" rx="1" fill="url(#metalGrad)"/>
+    <rect x="0" y="40" width="12" height="2" fill="#FFFFFF" opacity="0.4"/>
+
+    <!-- 木头 -->
+    <polygon points="0,48 12,48 6,58" fill="#FFE0B0"/>
+    <polygon points="2,48 10,48 6,55" fill="#FFD090"/>
+
+    <!-- 笔尖 -->
+    <polygon points="4,52 8,52 6,60" fill="#4A4A60"/>
+
+    <!-- 橡皮擦 -->
+    <rect x="0" y="-10" width="12" height="12" rx="3" fill="url(#eraserGrad)"/>
+    <rect x="0" y="-10" width="12" height="3" rx="1.5" fill="#FFC8DC" opacity="0.5"/>
+
+    <!-- 顶部金属 -->
+    <rect x="0" y="-12" width="12" height="4" rx="1" fill="url(#metalGrad)"/>
+  </g>
+
+  <!-- 红色100分标签 -->
+  <g transform="translate(92, 86)">
+    <circle cx="0" cy="0" r="16" fill="url(#redGrad)"/>
+    <circle cx="0" cy="0" r="14" fill="#FFE8E8"/>
+    <text x="0" y="5" font-size="11" font-weight="bold" fill="#EE4444" text-anchor="middle" font-family="Georgia, serif">100</text>
+  </g>
+
+  <!-- 打勾标签 -->
+  <g transform="translate(24, 96)">
+    <circle cx="0" cy="0" r="12" fill="#5DCE88"/>
+    <path d="M-5 0 L-2 3 L6 -4" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- 整体高光 -->
+  <ellipse cx="45" cy="38" rx="18" ry="10" fill="#FFFFFF" opacity="0.2"/>
+</svg>

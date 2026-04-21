@@ -1,0 +1,105 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 背景圆角方形 -->
+    <linearGradient id="baseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFB5BA"/>
+      <stop offset="50%" stop-color="#FFAAB5"/>
+      <stop offset="100%" stop-color="#F08A95"/>
+    </linearGradient>
+
+    <!-- 碗外身 -->
+    <linearGradient id="bowlOuter" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="30%" stop-color="#FFF8F8"/>
+      <stop offset="70%" stop-color="#FFE8EC"/>
+      <stop offset="100%" stop-color="#FFDDE5"/>
+    </linearGradient>
+
+    <!-- 碗内壁 -->
+    <linearGradient id="bowlInner" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#FFDDE5"/>
+      <stop offset="50%" stop-color="#FFF0F3"/>
+      <stop offset="100%" stop-color="#FFFFFF"/>
+    </linearGradient>
+
+    <!-- 米饭 -->
+    <radialGradient id="riceGrad" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#FFFEF8"/>
+      <stop offset="100%" stop-color="#FFF5E6"/>
+    </radialGradient>
+
+    <!-- 筷子木色 -->
+    <linearGradient id="chopGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D4A574"/>
+      <stop offset="50%" stop-color="#E8C4A0"/>
+      <stop offset="100%" stop-color="#C49660"/>
+    </linearGradient>
+
+    <!-- 高光 -->
+    <linearGradient id="gloss" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- 阴影 -->
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+    <filter id="dropShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#D4878F" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- 底座阴影 -->
+  <ellipse cx="64" cy="112" rx="38" ry="10" fill="#E8909C" opacity="0.3" filter="url(#softBlur)"/>
+
+  <!-- 圆角方形底座 -->
+  <rect x="12" y="12" width="104" height="104" rx="28" fill="url(#baseGrad)"/>
+  <rect x="12" y="12" width="104" height="104" rx="28" fill="url(#gloss)" opacity="0.3"/>
+
+  <!-- 碗底 -->
+  <ellipse cx="64" cy="100" rx="30" ry="10" fill="#FFE0E8"/>
+  <ellipse cx="64" cy="98" rx="28" ry="8" fill="#FFF0F5"/>
+
+  <!-- 碗身 -->
+  <path d="M34 80 Q30 95, 64 100 Q98 95, 94 80 L94 75 Q94 70, 90 70 L38 70 Q34 70, 34 75 Z" fill="url(#bowlOuter)" filter="url(#dropShadow)"/>
+
+  <!-- 碗身左侧高光 -->
+  <path d="M38 73 Q36 82, 44 92 Q40 88, 38 76 Q37 72, 38 73" fill="#FFFFFF" opacity="0.7"/>
+
+  <!-- 碗口 -->
+  <ellipse cx="64" cy="68" rx="32" ry="10" fill="#FFF5F8"/>
+  <ellipse cx="64" cy="67" rx="30" ry="9" fill="#FFFFFF" opacity="0.5"/>
+
+  <!-- 碗内壁 -->
+  <ellipse cx="64" cy="70" rx="26" ry="8" fill="url(#bowlInner)"/>
+
+  <!-- 米饭堆 -->
+  <ellipse cx="64" cy="66" rx="22" ry="7" fill="url(#riceGrad)"/>
+
+  <!-- 米饭颗粒 -->
+  <ellipse cx="54" cy="64" rx="3" ry="2" fill="#FFFFF8" opacity="0.8"/>
+  <ellipse cx="60" cy="62" rx="2.5" ry="1.5" fill="#FFFFF5" opacity="0.7"/>
+  <ellipse cx="68" cy="61" rx="2.5" ry="1.5" fill="#FFFFF0" opacity="0.6"/>
+  <ellipse cx="74" cy="63" rx="2" ry="1.5" fill="#FFFFF5" opacity="0.7"/>
+  <ellipse cx="64" cy="65" rx="3" ry="1.5" fill="#FFF8F0" opacity="0.5"/>
+
+  <!-- 米饭高光 -->
+  <ellipse cx="56" cy="60" rx="8" ry="4" fill="#FFFFFF" opacity="0.4"/>
+
+  <!-- 筷子1 -->
+  <g transform="translate(78, 32) rotate(15)">
+    <rect x="0" y="0" width="5" height="45" rx="2.5" fill="url(#chopGrad)"/>
+    <rect x="1" y="0" width="2" height="45" fill="#FFFFFF" opacity="0.3"/>
+  </g>
+
+  <!-- 筷子2 -->
+  <g transform="translate(86, 36) rotate(18)">
+    <rect x="0" y="0" width="5" height="45" rx="2.5" fill="url(#chopGrad)"/>
+    <rect x="1" y="0" width="2" height="45" fill="#FFFFFF" opacity="0.3"/>
+  </g>
+
+  <!-- 碗高光点 -->
+  <ellipse cx="44" cy="78" rx="4" ry="2" fill="#FFFFFF" opacity="0.6"/>
+</svg>

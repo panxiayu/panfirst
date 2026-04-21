@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>员工工作台 - 兴利汽车模具</title>
+    <link rel="stylesheet" href="css/mobile-theme.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+            background: var(--mobile-bg-page);
+            color: var(--mobile-text-primary);
+            padding-bottom: 80px;
+            padding-top: 20px;
+        }
+
+        .logout-btn {
+            font-size: 17px;
+            color: var(--mobile-text-primary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .welcome-card {
+            background: var(--mobile-bg-card);
+            border-radius: var(--mobile-radius-xl);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--mobile-shadow-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .welcome-left { flex: 1; }
+
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .welcome-sub {
+            font-size: 14px;
+            color: var(--mobile-text-secondary);
+        }
+
+        .module-card {
+            background: var(--mobile-bg-card);
+            border-radius: var(--mobile-radius-xl);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--mobile-shadow-md);
+            cursor: pointer;
+            transition: all var(--mobile-transition-fast);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
+            color: var(--mobile-text-primary);
+        }
+
+        .module-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .module-card:active { transform: scale(0.98); opacity: 0.9; }
+
+        .module-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+            overflow: hidden;
+            background: transparent;
+            box-shadow: none;
+        }
+        .module-icon img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+        }
+        .card-6s .module-icon img {
+            width: 58px;
+            height: 58px;
+        }
+
+        .module-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .module-name {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .module-desc {
+            font-size: 13px;
+            color: var(--mobile-text-secondary);
+        }
+
+        .module-arrow {
+            font-size: 20px;
+            color: var(--mobile-text-secondary);
+            flex-shrink: 0;
+        }
+
+        .no-permission {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--mobile-text-tertiary);
+        }
+
+        .no-permission-icon { font-size: 48px; margin-bottom: 16px; }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--mobile-text-tertiary);
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--mobile-secondary);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .tabbar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 76px;
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px;
+            border-top: 1px solid rgba(0,0,0,0.06);
+            z-index: 999;
+        }
+
+        .tab-item {
+            font-size: 12px;
+            color: var(--mobile-text-tertiary);
+            text-align: center;
+            transition: var(--transition);
+        }
+        .tab-item.active { color: var(--mobile-secondary); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading" class="loading" style="display: none;">加载中...</div>
+        <div id="noPermission" class="no-permission" style="display:none">
+            <div class="no-permission-icon">🔒</div>
+            <div>您当前没有任何可用模块权限</div>
+            <div style="font-size:12px;margin-top:8px;">请联系管理员开通权限</div>
+        </div>
+
+        <div class="welcome-card">
+            <div class="welcome-left">
+                <div class="welcome-title" id="welcomeName">你好，员工</div>
+                <div class="welcome-sub">欢迎使用兴利汽车模具工作台</div>
+            </div>
+            <button class="logout-btn" onclick="logout()">退出</button>
+        </div>
+
+        <div id="moduleGrid" style="display:none">
+            <a class="module-card card-learning" id="cardLearning" href="mobile-learning-materials-list.html" style="display:none">
+                <div class="module-icon">📚</div>
+                <div class="module-info">
+                    <div class="module-name">学习资料</div>
+                    <div class="module-desc">在线学习，观看视频</div>
+                </div>
+                <div class="module-arrow">›</div>
+            </a>
+            <a class="module-card card-exam" id="cardExam" href="mobile-exam-list.html" style="display:none">
+                <div class="module-icon"><img src="icons/icon-training.png" alt="培训"></div>
+                <div class="module-info">
+                    <div class="module-name">在线考试</div>
+                    <div class="module-desc">参加考试，查看成绩</div>
+                </div>
+                <div class="module-arrow">›</div>
+            </a>
+            <a class="module-card card-meal" id="cardMeal" href="mobile-meal-list.html" style="display:none">
+                <div class="module-icon"><img src="icons/icon-meal.png" alt="报餐"></div>
+                <div class="module-info">
+                    <div class="module-name">报餐系统</div>
+                    <div class="module-desc">每日报餐，食堂管理</div>
+                </div>
+                <div class="module-arrow">›</div>
+            </a>
+            <a class="module-card card-6s" id="card6S" href="mobile-6s-list.html" style="display:none">
+                <div class="module-icon"><img src="icons/icon-6s.png" alt="6S"></div>
+                <div class="module-info">
+                    <div class="module-name">6S管理</div>
+                    <div class="module-desc">曝光问题，整改管理</div>
+                </div>
+                <div class="module-arrow">›</div>
+            </a>
+            <a class="module-card card-voting" id="cardVoting" href="mobile-voting-list.html">
+                <div class="module-icon"><img src="icons/icon-voting.png" alt="投票"></div>
+                <div class="module-info">
+                    <div class="module-name">投票系统</div>
+                    <div class="module-desc">参与投票，查看结果</div>
+                </div>
+                <div class="module-arrow">›</div>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin + '/api';
+
+        function getStaff() {
+            try {
+                return JSON.parse(localStorage.getItem('employee_info') || '{}');
+            } catch { return {}; }
+        }
+
+        function logout() {
+            localStorage.removeItem('employee_token');
+            localStorage.removeItem('employee_info');
+            window.location.href = window.location.origin + '/';
+        }
+
+        async function init() {
+            const token = localStorage.getItem('employee_token');
+            if (!token) {
+                window.location.href = window.location.origin + '/';
+                return;
+            }
+
+            const staff = getStaff();
+            document.getElementById('welcomeName').textContent = '你好，' + (staff.name || '员工');
+
+            const perms = await checkGranularPermissions(token, staff.id);
+            saveGranularPermissions(perms);
+            document.getElementById('loading').style.display = 'none';
+
+            let hasAny = false;
+
+            if (perms.hasLearning) {
+                document.getElementById('cardLearning').style.display = '';
+                hasAny = true;
+            }
+
+            if (perms.hasExam) {
+                document.getElementById('cardExam').style.display = '';
+                hasAny = true;
+            }
+
+            document.getElementById('cardMeal').style.display = '';
+            hasAny = true;
+
+            if (perms.has6S) {
+                document.getElementById('card6S').style.display = '';
+                hasAny = true;
+            }
+
+            if (!hasAny) {
+                document.getElementById('noPermission').style.display = '';
+            }
+            document.getElementById('moduleGrid').style.display = '';
+        }
+
+        async function checkGranularPermissions(token, staffId) {
+            try {
+                const [examRes, mealRes, s6Res, learningRes] = await Promise.all([
+                    fetch(`${API}/permissions/exams`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API}/permissions/meals`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API}/permissions/s6`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API}/permissions/learning-materials`, { headers: { 'Authorization': `Bearer ${token}` } })
+                ]);
+
+                const [examData, mealData, s6Data, learningData] = await Promise.all([
+                    examRes.json(),
+                    mealRes.json(),
+                    s6Res.json(),
+                    learningRes.json()
+                ]);
+
+                const hasExam = examData.code === 0 && examData.data.some(e => e.perm_count > 0);
+                const hasMeal = mealData.code === 0 && mealData.data.some(m => m.perm_count > 0);
+                const has6S = s6Data.code === 0 && s6Data.data.some(s => s.id === staffId && s.has_perm == 1);
+                const hasLearning = learningData.code === 0 && learningData.data.some(t => t.has_perm == 1);
+
+                return { hasLearning, hasExam, hasMeal, has6S };
+            } catch (err) {
+                console.error('检查权限失败:', err);
+                return { hasLearning: false, hasExam: false, hasMeal: false, has6S: false };
+            }
+        }
+
+        function saveGranularPermissions(perms) {
+            localStorage.setItem('granular_permissions', JSON.stringify({
+                hasExam: perms.hasExam ? 1 : 0,
+                hasMeal: perms.hasMeal ? 1 : 0,
+                has6S: perms.has6S ? 1 : 0,
+                hasLearning: perms.hasLearning ? 1 : 0,
+                timestamp: Date.now()
+            }));
+        }
+
+        init();
+    </script>
+</body>
+</html>

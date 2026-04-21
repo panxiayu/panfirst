@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>投票列表 - 兴利汽车模具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --ios-bg: #f2f2f7;
+            --ios-card: rgba(255,255,255,0.9);
+            --ios-blue: #007aff;
+            --ios-gray: #8e8e93;
+            --ios-radius: 16px;
+            --ios-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+            --transition: 0.3s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+            background: var(--ios-bg);
+            color: #1c1c1e;
+            padding-bottom: 80px;
+            padding-top: 20px;
+        }
+
+
+
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .ios-card {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 20px 24px;
+            margin-bottom: 12px;
+            box-shadow: var(--ios-shadow);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .ios-card:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .ios-card h3 {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .ios-card p {
+            font-size: 15px;
+            color: var(--ios-gray);
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+
+        .card-meta {
+            font-size: 13px;
+            color: var(--ios-gray);
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+
+        .status-success { background: rgba(0,122,255,0.12); color: var(--ios-blue); }
+        .status-danger { background: rgba(255,59,48,0.12); color: #ff3b30; }
+        .status-warning { background: rgba(255,149,0,0.12); color: #ff9500; }
+        .status-default { background: rgba(0,122,255,0.08); color: var(--ios-blue); }
+        .status-info { background: rgba(88,200,255,0.12); color: #58c8ff; }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ios-gray);
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--ios-blue);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ios-gray);
+        }
+        .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+        .tabbar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 76px;
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px;
+            border-top: 1px solid rgba(0,0,0,0.06);
+            z-index: 999;
+        }
+
+        .tab-item {
+            font-size: 12px;
+            color: var(--ios-gray);
+            text-align: center;
+            transition: var(--transition);
+        }
+        .tab-item.active {
+            color: var(--ios-blue);
+        }
+
+        .toast {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            background: var(--ios-blue);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 10000;
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading" class="loading" style="display: none;">加载中...</div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">🗳️</div>
+            <div>暂无进行中的投票</div>
+        </div>
+        <div id="votingList"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+        let token = localStorage.getItem('employee_token');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!token) {
+                window.location.href = window.location.origin + '/';
+                return;
+            }
+            loadVotings();
+        });
+
+        function loadVotings() {
+            document.getElementById('loading').style.display = 'block';
+            fetch(`${API_URL}/voting/list`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                if (data.code === 0) {
+                    if (data.data.length === 0) {
+                        document.getElementById('emptyState').style.display = 'block';
+                    } else {
+                        renderVotings(data.data);
+                    }
+                } else {
+                    showToast(data.msg || '加载失败');
+                }
+            })
+            .catch(err => {
+                document.getElementById('loading').style.display = 'none';
+                showToast('加载失败');
+            });
+        }
+
+        function renderVotings(votings) {
+            const now = new Date();
+            document.getElementById('votingList').innerHTML = votings.map(v => {
+                const startDate = parseLocalDateTime(v.startDate);
+                const endDate = parseLocalDateTime(v.endDate);
+                const isEnded = endDate && endDate < now;
+                const notStarted = startDate && startDate > now;
+
+                let statusClass = 'status-success';
+                let statusText = '进行中';
+                if (isEnded) {
+                    statusClass = 'status-danger';
+                    statusText = '已结束';
+                } else if (notStarted) {
+                    statusClass = 'status-warning';
+                    statusText = '未开始';
+                }
+
+                return `
+                    <div class="ios-card" onclick="goToVoting('${v.anonymousToken}')">
+                        <h3>${v.title || '未命名投票'}</h3>
+                        <p>${v.description || '暂无描述'}</p>
+                        <div class="card-meta">${formatDateTime(v.startDate)} ~ ${formatDateTime(v.endDate)}</div>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                            ${v.isAnonymous ? '<span class="status-badge status-default">🔒 匿名</span>' : ''}
+                            ${v.multipleChoice ? '<span class="status-badge status-info">多选</span>' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function goToVoting(anonymousToken) {
+            window.location.href = `mobile-voting.html?token=${anonymousToken}`;
+        }
+
+        function goBack() {
+            window.location.href = 'employee.html';
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function parseLocalDateTime(dtStr) {
+            if (!dtStr) return null;
+            if (dtStr.endsWith('Z')) return new Date(dtStr);
+            const normalized = dtStr.replace(/[T\s]/g, '-');
+            const parts = normalized.split('-');
+            if (parts.length >= 5) {
+                return new Date(parts[0], parts[1] - 1, parts[2], parts[3], parts[4]);
+            }
+            return new Date(dtStr);
+        }
+
+        function formatDateTime(dt) {
+            if (!dt) return '-';
+            if (typeof dt === 'string' && dt.includes('T')) {
+                const [datePart, timePart] = dt.split('T');
+                const dateParts = datePart.split('-');
+                const timeParts = timePart.split(':');
+                return `${dateParts[0]}-${dateParts[1]}-${dateParts[2]} ${timeParts[0]}:${timeParts[1]}`;
+            }
+            return dt;
+        }
+    </script>
+</body>
+</html>

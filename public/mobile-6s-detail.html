@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>6S曝光详情 - 兴利汽车模具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --ios-bg: #f2f2f7;
+            --ios-card: rgba(255,255,255,0.9);
+            --ios-blue: #007aff;
+            --ios-gray: #8e8e93;
+            --ios-radius: 16px;
+            --ios-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+            --transition: 0.3s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+            background: var(--ios-bg);
+            color: #1c1c1e;
+            padding-bottom: 80px;
+            padding-top: 20px;
+        }
+
+
+
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .ios-card {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 20px 24px;
+            margin-bottom: 12px;
+            box-shadow: var(--ios-shadow);
+        }
+
+        .detail-row {
+            display: flex;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .detail-row:last-child { border-bottom: none; }
+
+        .detail-label {
+            font-size: 14px;
+            color: var(--ios-gray);
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            color: #1c1c1e;
+            flex: 1;
+            word-break: break-all;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-success { background: rgba(0,122,255,0.12); color: var(--ios-blue); }
+        .status-warning { background: rgba(255,149,0,0.12); color: #ff9500; }
+
+        .image-section {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 20px 24px;
+            margin-bottom: 12px;
+            box-shadow: var(--ios-shadow);
+        }
+
+        .image-section-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .image-item {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .image-item img {
+            width: 100%;
+            aspect-ratio: 4/3;
+            object-fit: cover;
+            display: block;
+        }
+
+        .image-item-label {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ios-gray);
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--ios-blue);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading" class="loading" style="display: none;">加载中...</div>
+
+        <div id="content" style="display: none;">
+            <div class="ios-card">
+                <div class="detail-row">
+                    <span class="detail-label">项目编号</span>
+                    <span class="detail-value" id="projectCode">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">区域</span>
+                    <span class="detail-value" id="area">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">问题描述</span>
+                    <span class="detail-value" id="description">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">责任人</span>
+                    <span class="detail-value" id="personCharge">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">状态</span>
+                    <span class="detail-value"><span id="status" class="status-badge"></span></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">检查日期</span>
+                    <span class="detail-value" id="checkDate">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">创建时间</span>
+                    <span class="detail-value" id="createdAt">-</span>
+                </div>
+            </div>
+
+            <div class="image-section">
+                <div class="image-section-title">整改照片</div>
+                <div class="image-grid" id="imageGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin + '/api';
+        let token = localStorage.getItem('employee_token');
+
+        if (!token) {
+            window.location.href = 'index.html';
+        }
+
+        function getId() {
+            return new URLSearchParams(window.location.search).get('id');
+        }
+
+        function goBack() {
+            window.location.href = 'mobile-6s-list.html';
+        }
+
+        async function loadRecord() {
+            const id = getId();
+            if (!id) { goBack(); return; }
+
+            document.getElementById('loading').style.display = '';
+
+            try {
+                const res = await fetch(API + '/6s/' + id, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.code === 0 && data.data) {
+                    renderRecord(data.data);
+                } else {
+                    alert('加载失败');
+                    goBack();
+                }
+            } catch (err) {
+                document.getElementById('loading').textContent = '加载失败';
+            }
+        }
+
+        function renderRecord(record) {
+            document.getElementById('projectCode').textContent = record.project_code || '-';
+            document.getElementById('area').textContent = record.area || '-';
+            document.getElementById('description').textContent = record.description || '-';
+            document.getElementById('personCharge').textContent = record.person_charge || '-';
+
+            const statusEl = document.getElementById('status');
+            if (record.status === 'fixed') {
+                statusEl.className = 'status-badge status-success';
+                statusEl.textContent = '已达标';
+            } else {
+                statusEl.className = 'status-badge status-warning';
+                statusEl.textContent = '待整改';
+            }
+
+            document.getElementById('checkDate').textContent = record.check_date ? formatDate(record.check_date) : '-';
+            document.getElementById('createdAt').textContent = record.created_at ? formatDate(record.created_at) : '-';
+
+            const imageGrid = document.getElementById('imageGrid');
+            let imagesHtml = '';
+
+            if (record.before_image) {
+                imagesHtml += `
+                    <div class="image-item">
+                        <img src="/uploads/6s/${record.before_image}" alt="整改前">
+                        <span class="image-item-label">整改前</span>
+                    </div>
+                `;
+            }
+
+            if (record.after_image) {
+                imagesHtml += `
+                    <div class="image-item">
+                        <img src="/uploads/6s/${record.after_image}" alt="整改后">
+                        <span class="image-item-label">整改后</span>
+                    </div>
+                `;
+            }
+
+            if (!imagesHtml) {
+                imagesHtml = '<div style="text-align:center;color:var(--ios-gray);grid-column:1/-1;padding:20px;">暂无照片</div>';
+            }
+
+            imageGrid.innerHTML = imagesHtml;
+            document.getElementById('content').style.display = '';
+        }
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        loadRecord();
+    </script>
+</body>
+</html>

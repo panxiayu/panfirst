@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报餐管理 - 兴利汽车模具</title>
+    <link rel="stylesheet" href="css/linear.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, var(--bg-page) 0%, var(--bg-surface) 50%, var(--bg-page) 100%); color: var(--text-primary); min-height: 100vh; }
+        .container { width: 100% !important; max-width: 1600px !important; margin: 0 auto; padding: 20px 24px; box-sizing: border-box; overflow-x: auto; }
+
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 10px; width: 100%; box-sizing: border-box; }
+        .toolbar-left { display: flex; align-items: center; gap: 12px; }
+        .toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .page-title { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-primary); }
+
+        .btn { padding: 8px 14px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; box-shadow: 0 3px 10px rgba(59,130,246,0.3); }
+        .btn-primary:hover { box-shadow: 0 4px 14px rgba(59,130,246,0.4); transform: translateY(-1px); }
+        .btn-green { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; box-shadow: 0 3px 10px rgba(34,197,94,0.3); }
+        .btn-green:hover { box-shadow: 0 4px 14px rgba(34,197,94,0.4); transform: translateY(-1px); }
+        .btn-red { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; box-shadow: 0 3px 10px rgba(239,68,68,0.3); }
+        .btn-red:hover { box-shadow: 0 4px 14px rgba(239,68,68,0.4); transform: translateY(-1px); }
+        .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        .stats-grid { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .stat-card { flex: 1; min-width: 100px; background: var(--bg-card); border-radius: var(--radius-lg); padding: 12px 14px; box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,0.6); cursor: pointer; transition: all 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .stat-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-size: 20px; font-weight: 700; color: var(--text-primary); }
+
+        .meal-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .meal-card {
+            background: linear-gradient(145deg, #ffffff 0%, var(--bg-card) 100%);
+            border-radius: var(--radius-lg);
+            padding: 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(255,255,255,0.9);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            position: relative;
+        }
+        .meal-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 25px 30px -8px rgba(0, 0, 0, 0.12), 0 12px 12px -6px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02);
+        }
+        .meal-card.temporary { border: 3px solid #22c55e; box-shadow: 0 4px 16px rgba(34,197,94,0.3); }
+        .meal-card.regular { }
+        .meal-card.ended { opacity: 0.7; }
+        .meal-header { padding: 16px 16px 12px; background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); }
+        .meal-header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .meal-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+        .meal-badges { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .meal-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+        .meal-checkbox { display: flex; width: 18px; height: 18px; border-radius: 4px; border: 2px solid #d1d5db; cursor: pointer; transition: all 0.2s; align-items: center; justify-content: center; }
+        .meal-checkbox:checked { background: #3b82f6; border-color: #3b82f6; }
+        .meal-checkbox:checked::after { content: '✓'; color: white; font-size: 12px; font-weight: bold; }
+        .meal-delete-batch.show { display: inline-flex; align-items: center; gap: 6px; }
+        .badge-active { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .badge-ended { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+                .meal-meta { font-size: 14px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; }
+        .meal-meta-icon { width: 16px; height: 16px; opacity: 0.7; }
+        .meal-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: rgba(0,0,0,0.04); margin: 0; }
+        .meal-stat { background: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%); padding: 16px 12px; text-align: center; }
+        .meal-stat-value { font-size: 24px; font-weight: 700; line-height: 1.1; }
+        .meal-stat-value.lunch { color: #f59e0b; }
+        .meal-stat-value.dinner { color: #3b82f6; }
+        .meal-stat-value.guest { color: #22c55e; }
+        .meal-stat-label { font-size: 11px; color: var(--text-secondary); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .meal-footer { padding: 10px 16px; background: rgba(0,0,0,0.02); border-top: 1px solid var(--border); display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+        .meal-footer-icon { width: 14px; height: 14px; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+        .loading { text-align: center; padding: 40px; color: var(--text-secondary); }
+
+        /* 弹窗 */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; overflow-y: auto; padding: 20px; }
+        .modal.show { display: flex; }
+        .modal-content { background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; max-width: 900px; width: 100%; max-height: 95vh; overflow: hidden; box-shadow: var(--shadow-lg); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+        .modal-title { font-size: 18px; font-weight: 700; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
+        .modal-close:hover { color: var(--text-primary); }
+        .modal-footer { display: flex; gap: 12px; margin-top: 20px; }
+        .modal-footer .btn { flex: 1; }
+
+        /* 表单 */
+        .form-group { margin-bottom: 16px; }
+        .form-label { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block; }
+        .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--bg-input); color: var(--text-primary); transition: all 0.2s; }
+        .form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+        .form-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        .meal-type-section { background: var(--bg-secondary); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+        .meal-type-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-weight: 600; font-size: 15px; }
+        .toggle-switch { position: relative; width: 44px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; inset: 0; background-color: #ccc; transition: .3s; border-radius: 24px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        .toggle-switch input:checked + .toggle-slider { background-color: #22c55e; }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+        .time-row { display: flex; align-items: center; gap: 8px; }
+        .time-row input { width: 120px; }
+        .time-separator { color: var(--text-muted); }
+        .time-disabled { opacity: 0.5; pointer-events: none; }
+
+        /* Toast 提示 */
+        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; }
+        .toast { background: rgba(239,68,68,0.95); color: white; padding: 14px 28px; border-radius: 8px; font-size: 14px; margin-bottom: 10px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+
+        /* 日历 */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .calendar-title { font-size: 16px; font-weight: 600; }
+        .calendar-nav { display: flex; gap: 8px; }
+        .calendar-nav button { padding: 6px 12px; border: 1px solid var(--border); background: var(--bg-secondary); border-radius: var(--radius); cursor: pointer; }
+        .calendar-body { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; width: 100%; margin-top: 5px; }
+        .calendar-weekday { text-align: center; font-size: 13px; font-weight: 600; color: #666; padding: 10px 0; background: #f8f9fa; border-radius: 8px; }
+        .calendar-day { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px; min-height: 70px; background: #fff; box-sizing: border-box; display: flex; flex-direction: column; transition: all 0.2s; }
+        .calendar-day:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); transform: translateY(-1px); }
+        .calendar-day.other-month { opacity: 0.4; background: #fafafa; }
+        .calendar-day.today { border: 2px solid #3b82f6; background: #eff6ff; }
+        .calendar-day.today .day-number { color: #3b82f6; }
+        .calendar-day.has-data { cursor: pointer; }
+        .day-number { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #333; }
+        .day-stats { font-size: 11px; color: #666; flex: 1; margin-top: -7px; }
+        .day-stats div { margin-top: 4px; padding: 3px 6px; background: #f3f4f6; border-radius: 4px; }
+        .day-stats div.lunch { background: #fef3c7; color: #92400e; }
+        .day-stats div.dinner { background: #d1fae5; color: #065f46; }
+
+        .detail-section { margin-bottom: 16px; }
+        .detail-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .detail-value { font-size: 14px; color: var(--text-primary); }
+
+        .meal-type-control { background: var(--bg-secondary); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .meal-type-info { font-weight: 600; }
+        .meal-type-time { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <span class="page-title">报餐管理</span>
+            </div>
+            <div class="toolbar-right">
+                <button class="btn btn-secondary btn-sm" onclick="location.href='dashboard.html'">返回</button>
+                <button class="btn btn-green btn-sm" onclick="openCreateModal('temporary')">+ 特殊报餐</button>
+                <button class="btn btn-primary btn-sm" onclick="openCreateModal('regular')">+ 常规报餐</button>
+                <button class="btn btn-red btn-sm meal-delete-batch" id="batchDeleteBtn" onclick="batchDeleteMeals()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    删除选中
+                </button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">加载中...</div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <p>暂无报餐活动</p>
+            <button class="btn btn-primary" onclick="openCreateModal('regular')">创建第一个报餐</button>
+        </div>
+        <div id="mealList"></div>
+    </div>
+
+    <!-- 创建报餐弹窗 -->
+    <div id="createModal" class="modal">
+        <div class="modal-content" style="max-width: 420px; padding: 20px;">
+            <div class="modal-header">
+                <span class="modal-title" id="createModalTitle">创建常规报餐</span>
+                <button class="modal-close" onclick="closeCreateModal()">×</button>
+            </div>
+            <div id="createForm">
+                <input type="hidden" id="createIsTemporary" value="0">
+                <div class="form-group">
+                    <label class="form-label">报餐名称 *</label>
+                    <input type="text" class="form-control" id="createTitle" placeholder="例如：4月份工作餐">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">报餐日期范围 *</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="date" class="form-control" id="createStartDate" style="flex:1">
+                        <span>至</span>
+                        <input type="date" class="form-control" id="createEndDate" style="flex:1">
+                    </div>
+                </div>
+
+                <div style="font-weight:600;font-size:14px;color:var(--text-secondary);margin:16px 0 12px;text-transform:uppercase;">报餐时间段设置</div>
+                <div class="form-hint" style="margin-bottom:12px">设置每天的午餐和晚餐报餐时间段，超出时间员工无法报名</div>
+
+                <div class="meal-type-section" id="createLunchSection">
+                    <div class="meal-type-header">
+                        <span>🍱 午餐</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="createLunchEnabled" checked onchange="toggleCreateMeal('lunch', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div id="createLunchTimes">
+                        <div class="time-row">
+                            <input type="time" class="form-control" id="createLunchStart" value="09:00">
+                            <span class="time-separator">至</span>
+                            <input type="time" class="form-control" id="createLunchEnd" value="10:30">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="meal-type-section" id="createDinnerSection">
+                    <div class="meal-type-header">
+                        <span>🍚 晚餐</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="createDinnerEnabled" checked onchange="toggleCreateMeal('dinner', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div id="createDinnerTimes">
+                        <div class="time-row">
+                            <input type="time" class="form-control" id="createDinnerStart" value="14:00">
+                            <span class="time-separator">至</span>
+                            <input type="time" class="form-control" id="createDinnerEnd" value="15:30">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="submitCreate()">创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="detailModalTitle">报餐详情</span>
+                <button class="modal-close" onclick="closeDetailModal()">×</button>
+            </div>
+            <div id="detailModalBody"></div>
+        </div>
+    </div>
+
+    <!-- 日历弹窗 -->
+    <div id="calendarModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="calendarModalTitle">报餐月统计</span>
+                <button class="modal-close" onclick="closeCalendarModal()">×</button>
+            </div>
+            <div id="calendarModalBody" style="padding:0;"></div>
+        </div>
+    </div>
+
+    <!-- 日报详情弹窗 -->
+    <div id="dayDetailModal" class="modal">
+        <div class="modal-content" style="max-width:1500px;">
+            <div class="modal-header">
+                <span class="modal-title" id="dayDetailModalTitle">日报详情</span>
+                <button class="modal-close" onclick="closeDayDetailModal()">×</button>
+            </div>
+            <div id="dayDetailModalBody" style="display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;"></div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/xlsx.full.min.js"></script>
+    <script>
+        const API_URL = window.location.origin + '/api';
+        let token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+        function showToast(msg) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                document.body.appendChild(container);
+            }
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.textContent = msg;
+            container.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        let currentActivityId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!token) {
+                window.location.href = 'admin/login.html';
+                return;
+            }
+            // 刷新时清除所有选中状态
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('mealChecked_')) localStorage.removeItem(key);
+            });
+            initCreateForm();
+            loadMeals();
+        });
+
+        function initCreateForm() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('createStartDate').min = today;
+            document.getElementById('createEndDate').min = today;
+        }
+
+        function toggleCreateMeal(type, enabled) {
+            const timesDiv = document.getElementById('create' + type.charAt(0).toUpperCase() + type.slice(1) + 'Times');
+            if (timesDiv) {
+                timesDiv.style.display = enabled ? 'block' : 'none';
+                timesDiv.querySelectorAll('input').forEach(i => i.disabled = !enabled);
+            }
+        }
+
+        document.getElementById('createStartDate').addEventListener('change', function() {
+            document.getElementById('createEndDate').min = this.value;
+            if (document.getElementById('createEndDate').value < this.value) {
+                document.getElementById('createEndDate').value = this.value;
+            }
+        });
+
+        function openCreateModal(type) {
+            const isTemporary = type === 'temporary' ? 1 : 0;
+            document.getElementById('createIsTemporary').value = isTemporary;
+            document.getElementById('createModalTitle').textContent = isTemporary ? '创建特殊报餐' : '创建常规报餐';
+            document.getElementById('createModal').classList.add('show');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.remove('show');
+        }
+
+        function submitCreate() {
+            console.log('submitCreate called');
+            const title = document.getElementById('createTitle').value.trim();
+            const start_date = document.getElementById('createStartDate').value;
+            const end_date = document.getElementById('createEndDate').value;
+            const lunch_enabled = document.getElementById('createLunchEnabled').checked ? 1 : 0;
+            const dinner_enabled = document.getElementById('createDinnerEnabled').checked ? 1 : 0;
+            const lunch_signup_start = document.getElementById('createLunchStart').value;
+            const lunch_signup_end = document.getElementById('createLunchEnd').value;
+            const dinner_signup_start = document.getElementById('createDinnerStart').value;
+            const dinner_signup_end = document.getElementById('createDinnerEnd').value;
+            const is_temporary = parseInt(document.getElementById('createIsTemporary').value);
+
+            console.log('表单值:', { title, start_date, end_date, is_temporary });
+
+            if (!title || !start_date || !end_date) {
+                alert('请填写必填项');
+                return;
+            }
+
+            if (new Date(end_date) < new Date(start_date)) {
+                alert('结束日期不能早于开始日期');
+                return;
+            }
+
+            const overlapping = window._cachedMeals?.find(m =>
+                m.is_temporary === is_temporary &&
+                m.start_date <= end_date &&
+                m.end_date >= start_date
+            );
+            if (overlapping) {
+                const typeName = is_temporary === 1 ? '特殊' : '常规';
+                alert(`${typeName}报餐 ${overlapping.start_date} - ${overlapping.end_date} 与 ${start_date} - ${end_date} 日期范围重叠，不可创建`);
+                return;
+            }
+
+            console.log('准备创建:', { title, start_date, end_date, is_temporary });
+            fetch(`${API_URL}/meal/create`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    title, start_date, end_date,
+                    lunch_enabled, lunch_signup_start, lunch_signup_end,
+                    dinner_enabled, dinner_signup_start, dinner_signup_end,
+                    is_temporary
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log('创建响应:', data);
+                if (data.code === 0) {
+                    closeCreateModal();
+                    loadMeals();
+                } else {
+                    alert('错误: ' + (data.msg || '创建失败'));
+                }
+            })
+            .catch(err => {
+                console.error('创建失败:', err);
+                alert('网络错误: ' + err.message);
+            });
+        }
+
+        function loadMeals() {
+            document.getElementById('loading').style.display = 'block';
+            fetch(`${API_URL}/meal/all/statistics`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                if (data.code === 0) {
+                    window._cachedMeals = data.data || [];
+                    renderMeals(window._cachedMeals);
+                }
+            })
+            .catch(err => {
+                document.getElementById('loading').style.display = 'none';
+                console.error(err);
+            });
+        }
+
+        function renderMeals(meals) {
+            const list = document.getElementById('mealList');
+            if (meals.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+                list.innerHTML = '';
+                return;
+            }
+
+            document.getElementById('emptyState').style.display = 'none';
+
+            // 按月份+类型分组
+            // 常规报餐：按月份分组，每月一张卡片
+            // 特殊报餐：每个活动独立一张卡片，不叠加
+            const cardMap = new Map();
+            const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+
+            meals.forEach(m => {
+                if (m.is_temporary === 1) {
+                    // 特殊报餐：每个活动独立一张卡片
+                    const cardKey = `temp_${m.id}`;
+                    cardMap.set(cardKey, {
+                        cardKey,
+                        monthKey: m.start_date.substring(0, 7),
+                        year: parseInt(m.start_date.substring(0, 4)),
+                        month: parseInt(m.start_date.substring(5, 7)),
+                        monthName: monthNames[parseInt(m.start_date.substring(5, 7)) - 1],
+                        type: 'temporary',
+                        meals: [m],
+                        totals: {
+                            lunch_employee: m.statistics.lunch?.employee || 0,
+                            lunch_guest: m.statistics.lunch?.guest || 0,
+                            dinner_employee: m.statistics.dinner?.employee || 0,
+                            dinner_guest: m.statistics.dinner?.guest || 0
+                        }
+                    });
+                } else {
+                    // 常规报餐：按月份分组
+                    const start = new Date(m.start_date);
+                    const end = new Date(m.end_date);
+                    const current = new Date(start.getFullYear(), start.getMonth(), 1);
+
+                    while (current <= end) {
+                        const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+                        const year = current.getFullYear();
+                        const month = current.getMonth() + 1;
+                        const monthName = monthNames[month - 1];
+                        const cardKey = `reg_${monthKey}`;
+
+                        if (!cardMap.has(cardKey)) {
+                            cardMap.set(cardKey, { cardKey, monthKey, year, month, monthName, type: 'regular', meals: [], totals: { lunch_employee: 0, lunch_guest: 0, dinner_employee: 0, dinner_guest: 0 } });
+                        }
+
+                        const existing = cardMap.get(cardKey);
+                        existing.meals.push(m);
+                        existing.totals.lunch_employee += m.statistics.lunch?.employee || 0;
+                        existing.totals.lunch_guest += m.statistics.lunch?.guest || 0;
+                        existing.totals.dinner_employee += m.statistics.dinner?.employee || 0;
+                        existing.totals.dinner_guest += m.statistics.dinner?.guest || 0;
+
+                        current.setMonth(current.getMonth() + 1);
+                    }
+                }
+            });
+
+            const cardList = Array.from(cardMap.values());
+
+            // 按月份排序（最新在前），特殊报餐排在常规报餐前面
+            cardList.sort((a, b) => {
+                if (a.monthKey !== b.monthKey) return b.monthKey.localeCompare(a.monthKey);
+                if (a.type !== b.type) return a.type === 'temporary' ? -1 : 1;
+                return 0;
+            });
+
+            let html = '<div class="meal-list">';
+            cardList.forEach(data => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const isEnded = data.meals.every(m => new Date(m.end_date) < today);
+                const statusClass = isEnded ? 'badge-ended' : 'badge-active';
+                const statusText = isEnded ? '已结束' : '进行中';
+                const typeText = data.type === 'temporary' ? '特殊' : '常规';
+                const cardClass = data.type + (isEnded ? ' ended' : '');
+                const bestMeal = data.meals[0];
+
+                const startDate = bestMeal.start_date.slice(5).replace('-', '/');
+                const endDate = bestMeal.end_date.slice(5).replace('-', '/');
+
+                // 特殊报餐显示活动名称，常规报餐显示月份
+                const cardTitle = data.type === 'temporary'
+                    ? `<span class="meal-title">${bestMeal.name || '特殊报餐'}</span>`
+                    : `<span class="meal-title">${data.year}年${data.monthName}</span>`;
+
+                // 特殊报餐不显示活动数量
+                const metaInfo = data.type === 'temporary'
+                    ? `<span>${startDate} - ${endDate}</span>`
+                    : `<span>${startDate} - ${endDate}</span><span>·</span><span>${data.meals.length}个活动</span>`;
+
+                html += `
+                <div class="meal-card ${cardClass}">
+                    <div class="meal-header" onclick="openCalendarModal(${bestMeal.id}, '${data.year}', ${data.month})">
+                        <div class="meal-header-top">
+                            ${cardTitle}
+                            <div class="meal-badges">
+                                <span class="meal-badge ${statusClass}">${statusText}</span>
+                                <input type="checkbox" class="meal-checkbox" value="${bestMeal.id}" ${localStorage.getItem('mealChecked_' + bestMeal.id) === 'true' ? 'checked' : ''} onclick="event.stopPropagation();toggleBatchDelete(this)">
+                            </div>
+                        </div>
+                        <div class="meal-meta">
+                            <svg class="meal-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            ${metaInfo}
+                        </div>
+                    </div>
+                    <div class="meal-stats" onclick="openCalendarModal(${bestMeal.id}, '${data.year}', ${data.month})">
+                        <div class="meal-stat">
+                            <div class="meal-stat-value lunch">${data.totals.lunch_employee}</div>
+                            <div class="meal-stat-label">午餐</div>
+                        </div>
+                        <div class="meal-stat">
+                            <div class="meal-stat-value dinner">${data.totals.dinner_employee}</div>
+                            <div class="meal-stat-label">晚餐</div>
+                        </div>
+                        <div class="meal-stat">
+                            <div class="meal-stat-value guest">${data.totals.lunch_guest + data.totals.dinner_guest}</div>
+                            <div class="meal-stat-label">客餐</div>
+                        </div>
+                    </div>
+                    <div class="meal-footer" onclick="openCalendarModal(${bestMeal.id}, '${data.year}', ${data.month})">
+                        <svg class="meal-footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        点击查看日历详情
+                    </div>
+                </div>
+                `;
+            });
+            html += '</div>';
+
+            list.innerHTML = html;
+        }
+
+        function openDetailModal(id) {
+            currentActivityId = id;
+            document.getElementById('loading').style.display = 'block';
+            fetch(`${API_URL}/meal/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                if (data.code === 0) {
+                    renderDetailModal(data.data);
+                    document.getElementById('detailModal').classList.add('show');
+                } else {
+                    showToast(data.msg || '加载失败');
+                }
+            })
+            .catch(err => {
+                document.getElementById('loading').style.display = 'none';
+                showToast('加载失败');
+            });
+        }
+
+        function renderDetailModal(activity) {
+            document.getElementById('detailModalTitle').textContent = activity.title;
+
+            let html = `
+                <div class="detail-section">
+                    <div class="detail-label">报餐日期</div>
+                    <div class="detail-value">${activity.start_date} 至 ${activity.end_date}</div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="detail-label" style="margin-bottom:8px">午餐控制</div>
+                    <div class="meal-type-control">
+                        <div>
+                            <div class="meal-type-info">🍱 午餐</div>
+                            <div class="meal-type-time">${activity.lunch_signup_start} - ${activity.lunch_signup_end}</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" ${activity.lunch_enabled ? 'checked' : ''} onchange="toggleMeal('lunch', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="detail-label" style="margin-bottom:8px">晚餐控制</div>
+                    <div class="meal-type-control">
+                        <div>
+                            <div class="meal-type-info">🍚 晚餐</div>
+                            <div class="meal-type-time">${activity.dinner_signup_start} - ${activity.dinner_signup_end}</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" ${activity.dinner_enabled ? 'checked' : ''} onchange="toggleMeal('dinner', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div style="margin-top:20px;display:flex;gap:12px;">
+                    <button class="btn btn-primary" onclick="openCalendarModal(${activity.id});closeDetailModal();" style="flex:1">查看日历</button>
+                </div>
+            `;
+
+            document.getElementById('detailModalBody').innerHTML = html;
+        }
+
+        function toggleMeal(type, enabled) {
+            fetch(`${API_URL}/meal/${currentActivityId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ [type + '_enabled']: enabled ? 1 : 0 })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                    loadMeals();
+                }
+            })
+            .catch(err => showToast('更新失败'));
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('show');
+        }
+
+        function openCalendarModal(id, year, month) {
+            currentActivityId = id;
+            document.getElementById('loading').style.display = 'block';
+            fetch(`${API_URL}/meal/${id}/statistics`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                if (data.code === 0) {
+                    renderCalendarModal(data.data, year, month);
+                    document.getElementById('calendarModal').classList.add('show');
+                } else {
+                    showToast(data.msg || '加载失败');
+                }
+            })
+            .catch(err => {
+                document.getElementById('loading').style.display = 'none';
+                showToast('加载失败');
+            });
+        }
+
+        function renderCalendarModal(data, year, month) {
+            const activity = data.activity;
+            const dailyStats = data.dailyStats;
+            const dailyDetails = data.dailyDetails || {};
+            const dates = data.dates;
+            const totals = data.totals;
+
+            document.getElementById('calendarModalTitle').textContent = `${year} 年 ${month} 月 - 统计`;
+
+            const endDate = new Date(activity.end_date);
+            const today = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-' + String(new Date().getDate()).padStart(2, '0');
+
+            // 使用传入的年月显示当月
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+
+            let html = `
+                <div class="month-stats" style="display:flex;gap:16px;margin-top:-10px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+                    <div class="stat-mini-card" style="flex:1;background:linear-gradient(135deg,#fef3c7,#fde68a);padding:16px 20px;border-radius:12px;min-width:0;text-align:center;">
+                        <div style="font-size:12px;color:#92400e;font-weight:600;">午餐</div>
+                        <div style="font-size:24px;font-weight:700;color:#92400e;">${totals.lunch_employee}</div>
+                    </div>
+                    <div class="stat-mini-card" style="flex:1;background:linear-gradient(135deg,#dbeafe,#bfdbfe);padding:16px 20px;border-radius:12px;min-width:0;text-align:center;">
+                        <div style="font-size:12px;color:#1e40af;font-weight:600;">晚餐</div>
+                        <div style="font-size:24px;font-weight:700;color:#1e40af;">${totals.dinner_employee}</div>
+                    </div>
+                    <div class="stat-mini-card" style="flex:1;background:linear-gradient(135deg,#d1fae5,#a7f3d0);padding:16px 20px;border-radius:12px;min-width:0;text-align:center;">
+                        <div style="font-size:12px;color:#065f46;font-weight:600;">客餐</div>
+                        <div style="font-size:24px;font-weight:700;color:#065f46;">${totals.lunch_guest + totals.dinner_guest}</div>
+                    </div>
+                    <button onclick="exportMonthReport(${activity.id}, ${year}, ${month})" style="padding:10px 20px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap;">导出月报表</button>
+                </div>
+
+                <div class="calendar-body">
+                    <div class="calendar-weekday">日</div>
+                    <div class="calendar-weekday">一</div>
+                    <div class="calendar-weekday">二</div>
+                    <div class="calendar-weekday">三</div>
+                    <div class="calendar-weekday">四</div>
+                    <div class="calendar-weekday">五</div>
+                    <div class="calendar-weekday">六</div>
+            `;
+
+            const startWeekday = firstDay.getDay();
+            for (let i = 0; i < startWeekday; i++) {
+                html += '<div class="calendar-day other-month"></div>';
+            }
+
+            for (let d = new Date(firstDay); d <= lastDay && d <= endDate; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                const isToday = dateStr === today;
+                const lunch = dailyStats[dateStr]?.lunch;
+                const dinner = dailyStats[dateStr]?.dinner;
+                const hasData = (lunch && (lunch.employee > 0 || lunch.guest > 0)) || (dinner && (dinner.employee > 0 || dinner.guest > 0));
+                const lunchDetail = dailyDetails[`${dateStr}_lunch`] || [];
+                const dinnerDetail = dailyDetails[`${dateStr}_dinner`] || [];
+
+                html += `
+                    <div class="calendar-day ${isToday ? 'today' : ''} ${hasData ? 'has-data' : ''}" ${hasData ? `onclick="showDayDetail('${dateStr}', ${activity.id})"` : ''}>
+                        <div class="day-number">${d.getDate()}</div>
+                        ${hasData ? `
+                            <div class="day-stats">
+                                <div style="background:#fef3c7;color:#92400e;">午餐:${(lunch?.employee||0)}</div>
+                                <div style="background:#dbeafe;color:#1e40af;">晚餐:${(dinner?.employee||0)}</div>
+                                <div style="background:#d1fae5;color:#065f46;">客餐:${(lunch?.guest||0)+(dinner?.guest||0)}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            html += '</div>'; // close calendar-body
+            document.getElementById('calendarModalBody').innerHTML = html;
+        }
+
+        function closeCalendarModal() {
+            document.getElementById('calendarModal').classList.remove('show');
+        }
+
+        function showDayDetail(dateStr, activityId) {
+            // 重新获取统计数据获取详情
+            fetch(`${API_URL}/meal/${activityId}/statistics`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code !== 0) {
+                    showToast('获取数据失败');
+                    return;
+                }
+
+                const dailyDetails = data.data.dailyDetails || {};
+                const dailyStats = data.data.dailyStats || {};
+                const lunchDetail = dailyDetails[`${dateStr}_lunch`] || [];
+                const dinnerDetail = dailyDetails[`${dateStr}_dinner`] || [];
+                const lunchStats = dailyStats[dateStr]?.lunch;
+                const dinnerStats = dailyStats[dateStr]?.dinner;
+
+                document.getElementById('dayDetailModalTitle').textContent = `${dateStr} 报餐详情`;
+
+                // 员工餐 - 午餐
+                const lunchEmployees = lunchDetail.filter(p => p.count > 0);
+                let lunchEmpHtml = lunchEmployees.length > 0
+                    ? lunchEmployees.map(p => {
+                        return `<div style="background:#fef3c7;padding:4px 8px;border-radius:20px;font-size:11px;color:#92400e;display:inline-flex;gap:4px;align-items:center;justify-content:center;min-width:100px;text-align:center;"><span style="font-weight:bold;">${p.employee_id}</span><span>${p.name}</span></div>`;
+                    }).join('')
+                    : '<span style="color:#999;font-size:13px;">无</span>';
+
+                // 员工餐 - 晚餐
+                const dinnerEmployees = dinnerDetail.filter(p => p.count > 0);
+                let dinnerEmpHtml = dinnerEmployees.length > 0
+                    ? dinnerEmployees.map(p => {
+                        return `<div style="background:#dbeafe;padding:4px 8px;border-radius:20px;font-size:11px;color:#1e40af;display:inline-flex;gap:4px;align-items:center;justify-content:center;min-width:100px;text-align:center;"><span style="font-weight:bold;">${p.employee_id}</span><span>${p.name}</span></div>`;
+                    }).join('')
+                    : '<span style="color:#999;font-size:13px;">无</span>';
+
+                // 客餐统计（从dailyStats获取）
+                const lunchGuestTotal = lunchStats?.guest || 0;
+                const dinnerGuestTotal = dinnerStats?.guest || 0;
+
+                // 员工餐 - 上下布局，宽度铺满，人员多列均匀分布
+                let empHtml = `
+                    <div style="background:#fef9ee;padding:16px;border-radius:12px;margin-bottom:16px;width:100%;box-sizing:border-box;">
+                        <div style="margin-bottom:12px;">
+                            <div style="font-size:14px;color:#92400e;margin-bottom:8px;font-weight:600;">🍱 午餐 ${lunchEmployees.length}人</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;">${lunchEmpHtml}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:14px;color:#1e40af;margin-bottom:8px;font-weight:600;">🍚 晚餐 ${dinnerEmployees.length}人</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;">${dinnerEmpHtml}</div>
+                        </div>
+                    </div>
+                `;
+
+                // 客餐 - 上下布局
+                let guestHtml = `
+                    <div style="background:#f0fdf4;padding:16px;border-radius:12px;width:100%;box-sizing:border-box;">
+                        <div style="font-weight:600;color:#333;margin-bottom:16px;font-size:15px;">🍚 客餐</div>
+                        <div style="display:flex;gap:24px;">
+                            <div style="background:#d1fae5;padding:12px 32px;border-radius:8px;font-size:14px;color:#065f46;">午餐 ${lunchGuestTotal}人</div>
+                            <div style="background:#d1fae5;padding:12px 32px;border-radius:8px;font-size:14px;color:#065f46;">晚餐 ${dinnerGuestTotal}人</div>
+                        </div>
+                    </div>
+                `;
+
+                let html = empHtml + guestHtml;
+
+                document.getElementById('dayDetailModalBody').innerHTML = html;
+                document.getElementById('dayDetailModal').classList.add('show');
+            })
+            .catch(err => showToast('获取数据失败'));
+        }
+
+        function closeDayDetailModal() {
+            document.getElementById('dayDetailModal').classList.remove('show');
+        }
+
+        function deleteMeal(id, title) {
+            if (!confirm(`确定删除报餐活动"${title}"吗？`)) return;
+            fetch(`${API_URL}/meal/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                    localStorage.removeItem('mealChecked_' + id);
+                    loadMeals();
+                } else {
+                    showToast(data.msg || '删除失败');
+                }
+            })
+            .catch(err => showToast('删除失败'));
+        }
+
+        function toggleBatchDelete(checkbox) {
+            const id = checkbox.value;
+            if (checkbox.checked) {
+                localStorage.setItem('mealChecked_' + id, 'true');
+            } else {
+                localStorage.removeItem('mealChecked_' + id);
+            }
+            const checkboxes = document.querySelectorAll('.meal-checkbox:checked');
+            const batchBtn = document.getElementById('batchDeleteBtn');
+            if (checkboxes.length > 0) {
+                batchBtn.classList.add('show');
+            } else {
+                batchBtn.classList.remove('show');
+            }
+        }
+
+        function batchDeleteMeals() {
+            const checkboxes = document.querySelectorAll('.meal-checkbox:checked');
+            if (checkboxes.length === 0) return;
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+            if (!confirm(`确定删除选中的 ${ids.length} 个报餐活动吗？`)) return;
+            Promise.all(ids.map(id =>
+                fetch(`${API_URL}/meal/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).then(res => res.json())
+            )).then(results => {
+                const failed = results.filter(r => r.code !== 0);
+                if (failed.length === 0) {
+                                        ids.forEach(id => localStorage.removeItem('mealChecked_' + id));
+                } else {
+                    showToast('部分删除失败');
+                }
+                document.getElementById('batchDeleteBtn').classList.remove('show');
+                loadMeals();
+            }).catch(err => showToast('删除失败'));
+        }
+
+        function exportMonthReport(activityId, year, month) {
+            // 获取该月统计数据
+            fetch(`${API_URL}/meal/${activityId}/statistics`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code !== 0) {
+                    showToast('获取数据失败');
+                    return;
+                }
+
+                const activity = data.data.activity;
+                const dailyStats = data.data.dailyStats;
+                const dailyDetails = data.data.dailyDetails || {};
+
+                // 生成当月日期
+                const firstDay = new Date(year, month - 1, 1);
+                const lastDay = new Date(year, month, 0);
+                const monthStr = `${year}年${month}月`;
+
+                // 获取该月所有日期
+                const dates = [];
+                for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+                    dates.push(d.toISOString().slice(0, 10));
+                }
+
+                // 收集有数据的日期列（只导出有报名的日期）
+                const validDateCols = [];
+                dates.forEach(dateStr => {
+                    const lunch = dailyStats[dateStr]?.lunch;
+                    const dinner = dailyStats[dateStr]?.dinner;
+                    const hasLunch = lunch && (lunch.people > 0 || lunch.employee > 0 || lunch.guest > 0);
+                    const hasDinner = dinner && (dinner.people > 0 || dinner.employee > 0 || dinner.guest > 0);
+
+                    if (hasLunch || hasDinner) {
+                        validDateCols.push({ date: dateStr, hasLunch, hasDinner, lunch, dinner });
+                    }
+                });
+
+                // 收集所有有报名的人员
+                const employeeMap = {};
+                dates.forEach(dateStr => {
+                    const lunchDetail = dailyDetails[`${dateStr}_lunch`] || [];
+                    const dinnerDetail = dailyDetails[`${dateStr}_dinner`] || [];
+
+                    lunchDetail.forEach(p => {
+                        if (!employeeMap[p.employee_id]) {
+                            employeeMap[p.employee_id] = {
+                                name: p.name,
+                                department: p.department || '',
+                                team: p.team || '',
+                                position: p.position || '',
+                                lunch: {},
+                                dinner: {}
+                            };
+                        }
+                        employeeMap[p.employee_id].lunch[dateStr] = p.count;
+                    });
+
+                    dinnerDetail.forEach(p => {
+                        if (!employeeMap[p.employee_id]) {
+                            employeeMap[p.employee_id] = {
+                                name: p.name,
+                                department: p.department || '',
+                                team: p.team || '',
+                                position: p.position || '',
+                                lunch: {},
+                                dinner: {}
+                            };
+                        }
+                        employeeMap[p.employee_id].dinner[dateStr] = p.count;
+                    });
+                });
+
+                // 构建表头（与模板格式一致）
+                // 序号 | 部门 | 班组 | 职位 | 姓名 | 日期列...
+                const header = ['序号', '部门', '班组', '职位', '姓名'];
+                validDateCols.forEach(col => {
+                    const day = col.date.slice(5);  // 04-13
+                    header.push(day + '午餐', day + '晚餐');
+                });
+                header.push('员工餐合计', '客餐合计');
+
+                // 构建数据
+                const wsData = [header];
+
+                // 按工号排序，添加数据行
+                let seq = 1;
+                Object.keys(employeeMap).sort().forEach(empId => {
+                    const emp = employeeMap[empId];
+                    let lunchTotal = 0, guestTotal = 0;
+                    const row = [seq++, emp.department, emp.team, emp.position, emp.name];  // 序号,部门,班组,职位,姓名
+
+                    validDateCols.forEach(col => {
+                        if (col.hasLunch) {
+                            const val = emp.lunch[col.date] ? 1 : 0;  // 1表示报名，0表示未报
+                            row.push(val);
+                            lunchTotal += val;
+                        } else {
+                            row.push('');
+                        }
+                        if (col.hasDinner) {
+                            const val = emp.dinner[col.date] ? 1 : 0;  // 1表示报名，0表示未报
+                            row.push(val);
+                            guestTotal += val;
+                        } else {
+                            row.push('');
+                        }
+                    });
+
+                    row.push(lunchTotal, guestTotal);
+                    wsData.push(row);
+                });
+
+                // 合计行（人数）
+                let totalEmp = 0, totalGuest = 0;
+                const sumRow = ['', '', '', '', '合计'];
+                validDateCols.forEach(col => {
+                    if (col.hasLunch) {
+                        sumRow.push(col.lunch?.people || 0);
+                        totalEmp += col.lunch?.people || 0;
+                    } else {
+                        sumRow.push('');
+                    }
+                    if (col.hasDinner) {
+                        sumRow.push(col.dinner?.people || 0);
+                        totalGuest += col.dinner?.people || 0;
+                    } else {
+                        sumRow.push('');
+                    }
+                });
+                sumRow.push(totalEmp, totalGuest);
+                wsData.push(sumRow);
+
+                // 创建工作表
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+                // 设置列宽
+                const colWidths = [
+                    { wch: 8 },   // 姓名
+                    { wch: 10 },  // 部门
+                    { wch: 10 },  // 班组
+                    { wch: 10 },  // 职位
+                    { wch: 8 },   // 序号
+                ];
+                validDateCols.forEach(() => {
+                    colWidths.push({ wch: 8 }, { wch: 8 });
+                });
+                colWidths.push({ wch: 10 }, { wch: 10 });
+                ws['!cols'] = colWidths;
+
+                // 创建工作簿
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, `${month}月报餐`);
+
+                // 下载
+                XLSX.writeFile(wb, `${activity.title}_${monthStr}_报餐.xlsx`);
+            })
+            .catch(err => showToast('导出失败'));
+        }
+
+        document.getElementById('createModal').addEventListener('click', function(e) {
+            if (e.target === this) closeCreateModal();
+        });
+        document.getElementById('detailModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDetailModal();
+        });
+        document.getElementById('calendarModal').addEventListener('click', function(e) {
+            if (e.target === this) closeCalendarModal();
+        });
+        document.getElementById('dayDetailModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDayDetailModal();
+        });
+    </script>
+</body>
+</html>

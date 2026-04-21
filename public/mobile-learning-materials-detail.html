@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>学习资料详情 - 兴利汽车模具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --ios-bg: #f2f2f7;
+            --ios-card: rgba(255,255,255,0.9);
+            --ios-blue: #007aff;
+            --ios-gray: #8e8e93;
+            --ios-green: #34c759;
+            --ios-orange: #ff9500;
+            --ios-red: #ff3b30;
+            --ios-radius: 16px;
+            --ios-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+            --transition: 0.3s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+            background: var(--ios-bg);
+            color: #1c1c1e;
+            padding-bottom: 100px;
+            padding-top: 20px;
+        }
+
+        .header {
+            max-width: 480px;
+            margin: 0 auto 16px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--ios-card);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--ios-shadow);
+            font-size: 16px;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            flex: 1;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ios-gray);
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--ios-blue);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .time-warning {
+            background: rgba(255,59,48,0.1);
+            border: 1px solid rgba(255,59,48,0.2);
+            border-radius: var(--ios-radius);
+            padding: 14px 20px;
+            margin-bottom: 12px;
+            text-align: center;
+            color: var(--ios-red);
+            font-size: 14px;
+        }
+
+        .video-container {
+            background: #000;
+            border-radius: var(--ios-radius);
+            overflow: hidden;
+            margin-bottom: 12px;
+            box-shadow: var(--ios-shadow);
+            position: relative;
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%;
+        }
+
+        .video-wrapper video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+
+        .video-play-btn {
+            width: 64px;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        .video-play-btn:active { transform: scale(0.95); }
+        .video-play-btn.hidden { display: none; }
+
+        .video-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding: 20px 16px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .video-progress {
+            flex: 1;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .video-progress-fill {
+            height: 100%;
+            background: var(--ios-blue);
+            transition: width 0.1s linear;
+        }
+
+        .video-time {
+            color: white;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .no-video-placeholder {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 40px 20px;
+            margin-bottom: 12px;
+            text-align: center;
+            box-shadow: var(--ios-shadow);
+        }
+
+        .no-video-icon { font-size: 48px; margin-bottom: 12px; }
+        .no-video-text { color: var(--ios-gray); font-size: 14px; }
+
+        .ios-card {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 20px 24px;
+            margin-bottom: 12px;
+            box-shadow: var(--ios-shadow);
+        }
+
+        .material-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .material-desc {
+            font-size: 14px;
+            color: var(--ios-gray);
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .material-time {
+            font-size: 13px;
+            color: var(--ios-gray);
+            margin-bottom: 12px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .status-not-started { background: rgba(142,142,147,0.12); color: var(--ios-gray); }
+        .status-in-progress { background: rgba(255,149,0,0.12); color: var(--ios-orange); }
+        .status-completed { background: rgba(52,199,89,0.12); color: var(--ios-green); }
+
+        .progress-section {
+            margin-top: 8px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(0,0,0,0.08);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--ios-blue);
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-size: 13px;
+            color: var(--ios-gray);
+            text-align: center;
+        }
+
+        .exam-section {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: var(--ios-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .exam-info { flex: 1; }
+
+        .exam-info-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .exam-info-desc {
+            font-size: 12px;
+            color: var(--ios-gray);
+        }
+
+        .ios-btn {
+            padding: 10px 20px;
+            background: var(--ios-blue);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .ios-btn:active { transform: scale(0.97); }
+        .ios-btn.disabled { background: var(--ios-gray); cursor: not-allowed; }
+
+        .toast {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            background: var(--ios-green);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 10000;
+            pointer-events: none;
+            text-align: center;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .exam-ask-modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+        .exam-ask-modal.show { display: flex; }
+
+        .exam-ask-box {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 28px 24px;
+            max-width: 300px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .exam-ask-icon { font-size: 48px; margin-bottom: 16px; }
+
+        .exam-ask-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .exam-ask-sub {
+            font-size: 14px;
+            color: var(--ios-gray);
+            margin-bottom: 24px;
+        }
+
+        .exam-ask-btns {
+            display: flex;
+            gap: 12px;
+        }
+
+        .exam-ask-btns button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+        .exam-ask-btns .btn-confirm { background: var(--ios-green); color: white; }
+        .exam-ask-btns .btn-cancel { background: rgba(0,0,0,0.06); color: var(--ios-gray); }
+
+        .tabbar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 76px;
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px;
+            border-top: 1px solid rgba(0,0,0,0.06);
+            z-index: 999;
+        }
+
+        .tab-item {
+            font-size: 12px;
+            color: var(--ios-gray);
+            text-align: center;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+        .tab-item.active { color: var(--ios-blue); }
+        .tab-icon { font-size: 24px; margin-bottom: 4px; display: block; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">←</button>
+        <div class="header-title">学习资料详情</div>
+    </div>
+
+    <div class="container">
+        <div id="loading" class="loading" style="display: none;">加载中...</div>
+
+        <div id="content" style="display: none;">
+            <div id="timeWarning" class="time-warning" style="display: none;">
+                当前不在学习时间范围内，无法学习
+            </div>
+
+            <div id="videoSection" class="video-container" style="display: none;">
+                <div class="video-wrapper">
+                    <video id="videoPlayer" playsinline disablePictureInPicture></video>
+                    <div id="videoOverlay" class="video-overlay">
+                        <button id="playBtn" class="video-play-btn">▶</button>
+                    </div>
+                </div>
+                <div class="video-controls" style="display: none;" id="videoControls">
+                    <span id="currentTime" class="video-time">0:00</span>
+                    <div class="video-progress">
+                        <div id="progressBar" class="video-progress-fill" style="width: 0%"></div>
+                    </div>
+                    <span id="durationTime" class="video-time">0:00</span>
+                </div>
+            </div>
+
+            <div id="noVideoPlaceholder" class="no-video-placeholder" style="display: none;">
+                <div class="no-video-icon">📄</div>
+                <div class="no-video-text">暂无视频内容</div>
+            </div>
+
+            <div class="ios-card">
+                <div class="material-title" id="materialTitle"></div>
+                <div id="materialDesc" class="material-desc" style="display: none;"></div>
+                <div class="material-time" id="materialTime"></div>
+                <div id="statusSection">
+                    <span id="statusBadge" class="status-badge"></span>
+                </div>
+                <div class="progress-section" id="progressSection">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div id="progressText" class="progress-text"></div>
+                </div>
+            </div>
+
+            <div id="examSection" class="exam-section" style="display: none;">
+                <div class="exam-info">
+                    <div class="exam-info-title">📝 关联考试</div>
+                    <div id="examTitle" class="exam-info-desc"></div>
+                    <div id="examStatus" class="exam-info-desc" style="margin-top: 4px;"></div>
+                </div>
+                <button id="examBtn" class="ios-btn" onclick="goToExam()">参加考试</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="completeToast" class="toast">🎉 学习资料已完成！</div>
+
+    <div id="examAskModal" class="exam-ask-modal">
+        <div class="exam-ask-box">
+            <div class="exam-ask-icon">🎉</div>
+            <div class="exam-ask-title">学习资料已完成！</div>
+            <div class="exam-ask-sub">是否立即参加关联考试？</div>
+            <div class="exam-ask-btns">
+                <button class="btn-cancel" onclick="closeExamAskModal()">稍后再说</button>
+                <button class="btn-confirm" onclick="goToExam()">参加考试</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="tabbar">
+        <a class="tab-item" href="employee.html">
+            <span class="tab-icon">🏠</span>
+            首页
+        </a>
+        <a class="tab-item" href="mobile-exam-list.html">
+            <span class="tab-icon">📝</span>
+            考试
+        </a>
+        <a class="tab-item active" href="mobile-learning-materials-list.html">
+            <span class="tab-icon">📚</span>
+            学习
+        </a>
+    </nav>
+
+    <script>
+        const API = window.location.origin + '/api';
+        const FILE_SERVER = 'http://112.16.178.98:3001';
+        let token = localStorage.getItem('employee_token');
+        let materialId = null;
+        let materialData = null;
+        let video = null;
+        let isPlaying = false;
+        let saveTimer = null;
+        let maxWatched = 0;
+        let linkedExam = null;
+        let hasShownCompleteModal = false;
+        let isVideoCompleted = false;
+
+        if (!token) {
+            window.location.href = 'index.html';
+        }
+
+        function getMaterialId() {
+            return new URLSearchParams(window.location.search).get('id');
+        }
+
+        function goBack() {
+            window.location.href = 'mobile-learning-materials-list.html';
+        }
+
+        async function loadMaterial() {
+            materialId = getMaterialId();
+            if (!materialId) { goBack(); return; }
+
+            document.getElementById('loading').style.display = '';
+
+            try {
+                const res = await fetch(API + '/learning-materials/' + materialId, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.code === 0 && data.data) {
+                    materialData = data.data;
+                    renderMaterial(materialData);
+                } else {
+                    alert(data.msg || '加载失败');
+                    goBack();
+                }
+            } catch (err) {
+                document.getElementById('loading').textContent = '加载失败';
+                console.error('加载学习资料失败:', err);
+            }
+        }
+
+        function renderMaterial(material) {
+            const now = new Date();
+            const startTime = material.start_time ? new Date(material.start_time) : null;
+            const endTime = material.end_time ? new Date(material.end_time) : null;
+            const inTimeRange = (!startTime || startTime <= now) && (!endTime || endTime >= now);
+
+            if (!inTimeRange) {
+                document.getElementById('timeWarning').style.display = '';
+            }
+
+            document.getElementById('materialTitle').textContent = material.title || '未命名资料';
+
+            if (material.description) {
+                document.getElementById('materialDesc').textContent = material.description;
+                document.getElementById('materialDesc').style.display = '';
+            }
+
+            let timeStr = '';
+            if (startTime) timeStr = formatDateTime(startTime);
+            if (endTime) timeStr += ' - ' + formatDateTime(endTime);
+            document.getElementById('materialTime').textContent = timeStr || '无时间限制';
+
+            // Status badge
+            const statusBadge = document.getElementById('statusBadge');
+            const progressPercent = material.progress ? (material.progress.progress_percent || 0) : 0;
+
+            if (material.progress && material.progress.status === 'completed') {
+                statusBadge.className = 'status-badge status-completed';
+                statusBadge.textContent = '已完成';
+            } else if (progressPercent > 0) {
+                statusBadge.className = 'status-badge status-in-progress';
+                statusBadge.textContent = '进行中';
+            } else {
+                statusBadge.className = 'status-badge status-not-started';
+                statusBadge.textContent = '未开始';
+            }
+
+            document.getElementById('progressFill').style.width = progressPercent + '%';
+            document.getElementById('progressText').textContent = '学习进度: ' + progressPercent + '%';
+
+            // Exam section
+            if (material.exam) {
+                linkedExam = material.exam;
+                const examSection = document.getElementById('examSection');
+                const examTitle = document.getElementById('examTitle');
+                const examStatus = document.getElementById('examStatus');
+                const examBtn = document.getElementById('examBtn');
+
+                examTitle.textContent = linkedExam.title || '未命名考试';
+                examStatus.textContent = '时长: ' + linkedExam.duration + '分钟 | 及格分数: ' + linkedExam.pass_score + '分';
+
+                if (linkedExam.is_active) {
+                    examStatus.innerHTML += ' | <span style="color:var(--ios-green);">考试已启用</span>';
+                } else {
+                    examStatus.innerHTML += ' | <span style="color:var(--ios-red);">考试已停用</span>';
+                    examBtn.classList.add('disabled');
+                    examBtn.onclick = function() { showToast('考试已停用，暂时无法参加', true); };
+                }
+
+                examSection.style.display = '';
+            }
+
+            // Video section
+            if (material.file_url) {
+                document.getElementById('videoSection').style.display = '';
+                initVideo(material.file_url, progressPercent, material.progress);
+            } else {
+                document.getElementById('noVideoPlaceholder').style.display = '';
+            }
+
+            document.getElementById('content').style.display = '';
+        }
+
+        function initVideo(videoUrl, progressPercent, progress) {
+            video = document.getElementById('videoPlayer');
+            const playBtn = document.getElementById('playBtn');
+            const videoOverlay = document.getElementById('videoOverlay');
+            const videoControls = document.getElementById('videoControls');
+
+            // Set video source
+            let src = videoUrl;
+            if (src.startsWith('/')) {
+                src = FILE_SERVER + src;
+            }
+            video.src = src;
+
+            // Restore position
+            if (progress && progress.last_position && progress.status !== 'completed') {
+                video.currentTime = progress.last_position;
+                maxWatched = progress.last_position;
+            }
+
+            // Play button click
+            videoOverlay.addEventListener('click', togglePlay);
+            playBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                togglePlay();
+            });
+
+            // Video events
+            video.addEventListener('play', () => {
+                playBtn.textContent = '❚❚';
+                playBtn.classList.add('hidden');
+                videoOverlay.classList.add('hidden');
+                videoControls.style.display = '';
+                isPlaying = true;
+            });
+
+            video.addEventListener('pause', () => {
+                playBtn.textContent = '▶';
+                playBtn.classList.remove('hidden');
+                videoOverlay.classList.remove('hidden');
+                isPlaying = false;
+            });
+
+            video.addEventListener('timeupdate', onTimeUpdate);
+            video.addEventListener('ended', onVideoEnded);
+            video.addEventListener('loadedmetadata', onVideoLoaded);
+
+            // Prevent fast forward - block seeking forward beyond maxWatched
+            video.addEventListener('seeking', onSeeking);
+
+            // Disable Picture-in-Picture
+            video.disablePictureInPicture = true;
+        }
+
+        function togglePlay() {
+            if (!video) return;
+            if (video.paused) {
+                video.play();
+            } else {
+                video.pause();
+            }
+        }
+
+        function onVideoLoaded() {
+            const duration = video.duration;
+            document.getElementById('durationTime').textContent = formatTime(duration);
+
+            // If already completed, seek to end
+            if (materialData.progress && materialData.progress.status === 'completed') {
+                video.currentTime = video.duration;
+                maxWatched = video.duration;
+                isVideoCompleted = true;
+                document.getElementById('progressFill').style.width = '100%';
+                document.getElementById('progressText').textContent = '学习进度: 100%';
+            }
+        }
+
+        function onTimeUpdate() {
+            if (!video) return;
+
+            const currentTime = video.currentTime;
+            const duration = video.duration;
+
+            // Update time display
+            document.getElementById('currentTime').textContent = formatTime(currentTime);
+
+            // Update progress bar
+            if (duration > 0) {
+                const progressPercent = Math.floor((currentTime / duration) * 100);
+                document.getElementById('progressBar').style.width = progressPercent + '%';
+            }
+
+            // Track max watched position (only forward)
+            if (currentTime > maxWatched) {
+                maxWatched = currentTime;
+            }
+
+            // Debounced save
+            if (!saveTimer) {
+                saveTimer = setTimeout(() => {
+                    saveProgress();
+                    saveTimer = null;
+                }, 3000);
+            }
+        }
+
+        function onSeeking() {
+            if (!video) return;
+
+            // Allow seeking backwards, but not forward beyond maxWatched
+            if (video.currentTime > maxWatched + 0.5) {
+                video.currentTime = maxWatched;
+                showToast('请按顺序观看，禁止快进', true);
+            }
+        }
+
+        function onVideoEnded() {
+            maxWatched = video.duration;
+            isVideoCompleted = true;
+            saveProgress(true);
+        }
+
+        async function saveProgress(completed = false) {
+            if (!materialId || !video) return;
+
+            try {
+                const duration = video.duration || 1;
+                const progressPercent = Math.min(Math.floor((maxWatched / duration) * 100), 100);
+                const status = (completed || progressPercent >= 100) ? 'completed' : 'in_progress';
+
+                const res = await fetch(API + '/learning-materials/' + materialId + '/progress', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        status: status,
+                        progress_percent: progressPercent,
+                        last_position: video.currentTime
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.code === 0) {
+                    document.getElementById('progressFill').style.width = progressPercent + '%';
+                    document.getElementById('progressText').textContent = '学习进度: ' + progressPercent + '%';
+
+                    if (status === 'completed') {
+                        const statusBadge = document.getElementById('statusBadge');
+                        statusBadge.className = 'status-badge status-completed';
+                        statusBadge.textContent = '已完成';
+                        showCompleteToast();
+                    }
+                }
+            } catch (err) {
+                console.error('保存进度失败:', err);
+            }
+        }
+
+        function showCompleteToast() {
+            if (hasShownCompleteModal) return;
+            hasShownCompleteModal = true;
+
+            if (linkedExam && linkedExam.is_active) {
+                document.getElementById('examAskModal').classList.add('show');
+            } else {
+                showToast('🎉 学习资料已完成！');
+            }
+        }
+
+        function closeExamAskModal() {
+            document.getElementById('examAskModal').classList.remove('show');
+        }
+
+        function goToExam() {
+            closeExamAskModal();
+            if (linkedExam) {
+                window.location.href = 'mobile-exam-list.html?examId=' + linkedExam.id;
+            }
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('completeToast');
+            toast.textContent = message;
+            toast.style.background = isError ? 'var(--ios-red)' : 'var(--ios-green)';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        function formatTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatDateTime(date) {
+            const d = new Date(date);
+            const month = d.getMonth() + 1;
+            const day = d.getDate();
+            const hour = d.getHours().toString().padStart(2, '0');
+            const minute = d.getMinutes().toString().padStart(2, '0');
+            return `${month}月${day}日 ${hour}:${minute}`;
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (video && maxWatched > 0 && !isVideoCompleted) {
+                saveProgress();
+            }
+        });
+
+        loadMaterial();
+    </script>
+</body>
+</html>

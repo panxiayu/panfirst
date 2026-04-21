@@ -1,0 +1,2557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>兴利汽车-报餐</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="css/mobile-theme.css">
+    <style>
+        /* 页面特定样式 - 仅覆盖需要定制的部分 */
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+            background: var(--mobile-bg-page);
+            color: var(--mobile-text-primary);
+            font-size: 15px;
+            line-height: 1.5;
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        body::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+
+        .page {
+            width: 100%;
+            max-width: 480px;
+            min-height: 100vh;
+            background: var(--mobile-bg-page);
+            margin: 0 auto;
+            padding: 20px 16px 100px;
+            box-sizing: border-box;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--mobile-text-primary);
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--mobile-text-secondary);
+        }
+
+        /* 卡片容器 */
+        .card {
+            background: var(--mobile-bg-card);
+            border-radius: var(--mobile-radius-xl);
+            box-shadow: var(--mobile-shadow-md);
+            overflow: hidden;
+            transition: box-shadow var(--mobile-transition-normal), transform var(--mobile-transition-normal);
+            margin-bottom: 16px;
+        }
+
+        .card:hover {
+            box-shadow: var(--mobile-shadow-lg);
+        }
+
+        .card:active {
+            transform: scale(0.99);
+        }
+
+        /* 今日日期卡片 */
+        .today-card {
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .today-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #fff;
+        }
+
+        .today-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            position: relative;
+        }
+
+        .today-date {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--mobile-primary), #FF9500);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(255,183,0,0.35);
+            position: absolute;
+            left: 0;
+        }
+
+        .today-day {
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .today-month {
+            font-size: 11px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .today-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .today-info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .today-weekday {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--mobile-text-primary);
+            margin-bottom: 2px;
+        }
+
+        .today-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .today-range {
+            font-size: 12px;
+            color: var(--mobile-text-secondary);
+            text-align: center;
+            margin-top: 6px;
+        }
+
+        .today-status-big {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--mobile-success);
+            text-align: center;
+        }
+
+        .today-status {
+            padding: 4px 10px;
+            background: var(--mobile-success-light);
+            color: var(--mobile-success);
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: var(--mobile-radius-full);
+        }
+
+        /* 快捷操作区 */
+        .quick-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .quick-item {
+            padding: 20px;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .quick-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .quick-icon.blue {
+            background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+            box-shadow: 0 4px 12px rgba(59,130,246,0.25);
+        }
+
+        .quick-icon.yellow {
+            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+            box-shadow: 0 4px 12px rgba(251,191,36,0.25);
+        }
+
+        .quick-icon.green {
+            background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+            box-shadow: 0 4px 12px rgba(16,185,129,0.25);
+        }
+
+        .quick-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .quick-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--mobile-text-primary);
+            margin-bottom: 4px;
+        }
+
+        .quick-desc {
+            font-size: 13px;
+            color: var(--mobile-text-secondary);
+        }
+
+        .quick-arrow {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--mobile-bg-hover);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--mobile-text-tertiary);
+            font-size: 18px;
+            transition: all var(--mobile-transition-fast);
+        }
+
+        .quick-item:active .quick-arrow {
+            background: var(--mobile-primary-light);
+            color: var(--mobile-primary);
+            transform: translateX(4px);
+        }
+            border-radius: var(--mobile-radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+
+        .quick-icon.yellow {
+            background: var(--mobile-primary-light);
+        }
+
+        .quick-icon.blue {
+            background: var(--mobile-secondary-light);
+        }
+
+        .quick-icon.green {
+            background: var(--mobile-success-light);
+        }
+
+        .quick-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--mobile-text-primary);
+            margin-bottom: 2px;
+        }
+
+        .quick-desc {
+            font-size: 12px;
+            color: var(--mobile-text-tertiary);
+        }
+
+        /* 餐类选择卡片 */
+        .meal-card {
+            padding: 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .meal-card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+            overflow: hidden;
+            background: transparent;
+            box-shadow: none;
+        }
+        .meal-card-icon img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        .meal-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .meal-card-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--mobile-text-primary);
+            margin-bottom: 4px;
+        }
+
+        .meal-card-desc {
+            font-size: 13px;
+            color: var(--mobile-text-secondary);
+        }
+
+        .meal-card-arrow {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--mobile-bg-hover);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--mobile-text-tertiary);
+            font-size: 18px;
+            transition: all var(--mobile-transition-fast);
+        }
+
+        .meal-card:active .meal-card-arrow {
+            background: var(--mobile-primary-light);
+            color: var(--mobile-primary);
+            transform: translateX(4px);
+        }
+
+        .meal-card-divider {
+            height: 1px;
+            background: var(--mobile-border-light);
+            margin: 0 20px;
+        }
+
+        .meal-record-divider {
+            height: 1px;
+            border-top: 1px dashed var(--mobile-border-medium);
+            margin: 0;
+        }
+
+        /* 底部信息 */
+        .bottom-hint {
+            text-align: center;
+            padding: 20px 0;
+            color: var(--mobile-text-tertiary);
+            font-size: 12px;
+        }
+
+        .bottom-hint span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* 返回按钮 */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--mobile-secondary);
+            font-size: 15px;
+            font-weight: 500;
+            padding: 8px 0;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: color var(--mobile-transition-fast);
+        }
+
+        .back-btn:hover {
+            color: var(--mobile-secondary-dark);
+        }
+
+        /* 报名页面 */
+        .signup-card {
+            overflow: hidden;
+        }
+
+        .signup-header {
+            padding: 28px 24px;
+            text-align: center;
+            position: relative;
+        }
+
+        .signup-header.yellow {
+            background: linear-gradient(135deg, var(--mobile-primary), #FF9500);
+        }
+
+        .signup-header.green {
+            background: linear-gradient(135deg, var(--mobile-success), #059669);
+        }
+
+        .signup-header-icon {
+            font-size: 56px;
+            margin-bottom: 8px;
+        }
+        .signup-header-icon img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+        }
+
+        .signup-header-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .signup-header-time {
+            font-size: 13px;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .signup-body {
+            padding: 24px;
+        }
+
+        .signup-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--mobile-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        /* 计数器 */
+        .counter {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            padding: 24px 0;
+        }
+
+        .counter-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: none;
+            font-size: 26px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--mobile-transition-fast);
+        }
+
+        .counter-btn:active {
+            transform: scale(0.92);
+        }
+
+        .counter-btn.minus {
+            background: var(--mobile-bg-hover);
+            color: var(--mobile-text-secondary);
+            box-shadow: var(--mobile-shadow-sm);
+        }
+
+        .counter-btn.minus:active {
+            background: var(--mobile-danger-light);
+            color: var(--mobile-danger);
+        }
+
+        .counter-btn.plus {
+            background: linear-gradient(135deg, var(--mobile-primary), #FF9500);
+            color: white;
+            box-shadow: 0 4px 16px rgba(255,183,0,0.4);
+        }
+
+        .counter-btn.plus:active {
+            box-shadow: 0 2px 8px rgba(255,183,0,0.3);
+        }
+
+        .counter-value {
+            font-size: 56px;
+            font-weight: 800;
+            color: var(--mobile-text-primary);
+            min-width: 80px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .signup-fixed-count {
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--mobile-text-primary);
+            text-align: center;
+            padding: 24px 0;
+            letter-spacing: 8px;
+        }
+
+        /* 餐类切换 - 两个按钮并排 */
+        .type-switch {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .type-btn {
+            flex: 1;
+            padding: 16px 12px;
+            border: 2px solid var(--mobile-border-light);
+            border-radius: 12px;
+            background: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.25s ease;
+            color: var(--mobile-text-secondary);
+        }
+
+        .type-btn:active {
+            transform: scale(0.96);
+        }
+
+        .type-btn.active.lunch {
+            border-color: #F59E0B;
+            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+            color: #92400E;
+            font-weight: 700;
+            box-shadow: 0 4px 16px rgba(251, 191, 36, 0.4);
+        }
+
+        .type-btn.active.dinner {
+            border-color: #3B82F6;
+            background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+            color: #1E40AF;
+            font-weight: 700;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+        }
+
+        /* 提交按钮 */
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: var(--mobile-radius-md);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--mobile-transition-fast);
+            color: white;
+            margin-top: 8px;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        .submit-btn.primary {
+            background: linear-gradient(135deg, var(--mobile-primary), #FF9500);
+            box-shadow: 0 4px 16px rgba(255,183,0,0.35);
+        }
+
+        .submit-btn.primary:active {
+            box-shadow: 0 2px 8px rgba(255,183,0,0.25);
+        }
+
+        .submit-btn.secondary {
+            background: linear-gradient(135deg, var(--mobile-success), #059669);
+            box-shadow: 0 4px 16px rgba(16,185,129,0.35);
+        }
+
+        .submit-btn.danger {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            box-shadow: 0 4px 16px rgba(239,68,68,0.35);
+        }
+
+        /* 客餐表单 */
+        .guest-form {
+            padding: 24px;
+            overflow: hidden;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--mobile-text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid var(--mobile-border-light);
+            border-radius: var(--mobile-radius-md);
+            font-size: 15px;
+            background: white;
+            box-sizing: border-box;
+            color: var(--mobile-text-primary);
+            transition: all var(--mobile-transition-fast);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--mobile-primary);
+            box-shadow: 0 0 0 3px rgba(255,183,0,0.15);
+        }
+
+        .form-input::placeholder {
+            color: var(--mobile-text-tertiary);
+        }
+
+        textarea.form-input {
+            resize: none;
+            min-height: 60px;
+            width: calc(100% - 4px);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(17,24,39,0.9);
+            color: white;
+            padding: 14px 28px;
+            border-radius: var(--mobile-radius-md);
+            font-size: 15px;
+            font-weight: 500;
+            z-index: 1001;
+            backdrop-filter: blur(8px);
+            box-shadow: var(--mobile-shadow-xl);
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .loading-spinner {
+            width: 44px;
+            height: 44px;
+            border: 3px solid var(--mobile-border-light);
+            border-top-color: var(--mobile-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading-text {
+            color: var(--mobile-text-tertiary);
+            font-size: 14px;
+        }
+
+        /* 动画优化 */
+        :root {
+            --animate-duration: 0.6s;
+        }
+
+        .animate__animated {
+            animation-duration: var(--animate-duration) !important;
+        }
+
+        .animate__animated.animate__wobble {
+            animation-duration: 0.6s;
+        }
+
+        .animate__slideInDown {
+            animation-name: slideInDown !important;
+        }
+
+        .animate__delay-1s { animation-delay: 0.4s !important; }
+        .animate__delay-2s { animation-delay: 0.6s !important; }
+        .animate__delay-3s { animation-delay: 0.8s !important; }
+
+        /* 近期报餐记录 */
+        .recent-section {
+            margin-top: 8px;
+        }
+
+        .recent-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--mobile-text-secondary);
+            margin-bottom: 12px;
+            padding-left: 4px;
+        }
+
+        .recent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .recent-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: var(--mobile-bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--mobile-shadow-sm);
+            transition: all var(--mobile-transition-fast);
+        }
+
+        .recent-card:active {
+            transform: scale(0.98);
+            background: var(--mobile-bg-hover);
+        }
+
+        .recent-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: var(--mobile-radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .recent-icon.lunch {
+            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+        }
+
+        .recent-icon.dinner {
+            background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+        }
+
+        .recent-icon.guest {
+            background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+        }
+
+        .recent-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .recent-date {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--mobile-text-primary);
+            margin-bottom: 2px;
+        }
+
+        .recent-detail {
+            font-size: 12px;
+            color: var(--mobile-text-secondary);
+        }
+
+        .recent-badge {
+            padding: 4px 8px;
+            border-radius: var(--mobile-radius-full);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .recent-badge.special {
+            background: var(--mobile-success-light);
+            color: var(--mobile-success);
+        }
+
+        .recent-badge.regular {
+            background: var(--mobile-primary-light);
+            color: var(--mobile-primary-dark);
+        }
+
+        /* 今日状态 */
+        .today-status.signed {
+            background: var(--mobile-success-light);
+            color: var(--mobile-success);
+        }
+
+        .today-status.unsigned {
+            background: var(--mobile-bg-hover);
+            color: var(--mobile-text-tertiary);
+        }
+
+        .today-signup-detail {
+            display: flex;
+            gap: 12px;
+            margin-top: 6px;
+        }
+
+        .signup-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: var(--mobile-bg-hover);
+            border-radius: var(--mobile-radius-full);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .signup-tag.lunch {
+            color: var(--mobile-primary-dark);
+        }
+
+        .signup-tag.dinner {
+            color: var(--mobile-secondary-dark);
+        }
+
+        /* 主卡片容器 */
+        .card-container {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .card-container > .card {
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 0;
+            border-radius: var(--mobile-radius-xl) var(--mobile-radius-xl) 0 0;
+            box-shadow: var(--mobile-shadow-md);
+        }
+
+        .card-container > .sub-card {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .sub-card {
+            background: var(--mobile-bg-hover);
+            padding: 16px 20px;
+            box-shadow: var(--mobile-shadow-sm);
+            margin: 0;
+            min-height: 60px;
+        }
+
+        .card-container > .sub-card:last-child {
+            border-radius: 0 0 var(--mobile-radius-xl) var(--mobile-radius-xl);
+        }
+
+        .sub-card.item-card {
+            border-bottom: 1px solid var(--mobile-border-light);
+        }
+
+        .sub-card.item-card:first-child {
+            border-radius: 0;
+        }
+
+        .sub-card.item-card:last-child {
+            border-radius: 0 0 var(--mobile-radius-xl) var(--mobile-radius-xl);
+            border-bottom: none;
+        }
+
+        .swipe-container:last-child {
+            border-radius: 0 0 var(--mobile-radius-xl) var(--mobile-radius-xl);
+        }
+
+        .sub-card.item-card:only-child {
+            border-radius: var(--mobile-radius-xl);
+            border-bottom: none;
+        }
+
+        /* 右滑取消样式 */
+        .swipe-container {
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 0;
+            touch-action: none;
+        }
+        .swipe-container:last-child {
+            margin-bottom: 0;
+        }
+        .swipe-card {
+            position: relative;
+            background: var(--mobile-bg-card);
+            z-index: 1;
+            transition: transform 0.2s ease-out;
+        }
+        .swipe-container.swiping .swipe-card {
+            transition: none !important;
+        }
+        .swipe-container.swiped-left .swipe-card {
+            transform: translateX(-60px) !important;
+            transition: none !important;
+        }
+        .swipe-action-left {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 48px;
+            height: 48px;
+            background: #ff3b30;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.15s, transform 0.2s ease-out;
+            z-index: 0;
+        }
+        .swipe-action-left .trash-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 22px;
+        }
+        .swipe-action-left .trash-icon::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 14px;
+            height: 3px;
+            background: #fff;
+            border-radius: 1px;
+        }
+        .swipe-action-left .trash-icon::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 16px;
+            background: #fff;
+            border-radius: 0 0 3px 3px;
+        }
+        .swipe-container.swiped-left .swipe-action-left {
+            opacity: 1;
+        }
+        .swipe-container.swiped-left .swipe-card {
+            transform: translateX(-60px);
+        }
+        /* 今日报餐情况内容 */
+        .info-card-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            min-height: 60px;
+            padding: 0 20px;
+            gap: 8px;
+        }
+
+        .swipe-container .swipe-card .info-row {
+            border-bottom: 1px solid var(--mobile-border-light);
+        }
+
+        .swipe-container:last-child .swipe-card .info-row {
+            border-bottom: none;
+        }
+
+        .info-check {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--mobile-text-primary);
+            min-width: 90px;
+        }
+
+        .info-count {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--mobile-text-secondary);
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .info-reason {
+            flex: 1;
+            font-size: 14px;
+            color: var(--mobile-text-secondary);
+            margin-left: 16px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 120px;
+        }
+
+        .info-empty-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 0;
+        }
+
+        .info-empty-tag {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--mobile-text-tertiary);
+        }
+
+        .info-empty-hint {
+            font-size: 12px;
+            color: var(--mobile-text-tertiary);
+        }
+
+        .info-card-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            min-height: 60px;
+            padding: 0 20px;
+            gap: 8px;
+        }
+
+        .info-check {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--mobile-text-primary);
+        }
+
+        .info-count {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--mobile-text-secondary);
+        }
+
+        .info-success {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--mobile-success);
+            margin-left: 8px;
+        }
+
+        .info-empty-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 0;
+        }
+
+        .info-empty-tag {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--mobile-text-tertiary);
+        }
+
+        .info-empty-hint {
+            font-size: 12px;
+            color: var(--mobile-text-tertiary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        .empty-text {
+            font-size: 14px;
+            color: var(--mobile-text-tertiary);
+        }
+
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+        }
+        .record-divider {
+            border-bottom: 1px solid var(--mobile-border);
+        }
+        .record-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .record-icon {
+            font-size: 24px;
+        }
+        .record-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .record-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--mobile-text-primary);
+        }
+        .record-date {
+            font-size: 12px;
+            color: var(--mobile-text-tertiary);
+        }
+        .record-right {
+            text-align: right;
+        }
+        .record-count {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--mobile-primary);
+        }
+        .record-guest {
+            font-size: 11px;
+            color: var(--mobile-text-tertiary);
+        }
+
+        /* 日历样式 */
+        .calendar-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow: hidden;
+        }
+        .calendar-month {
+            background: var(--mobile-bg-card);
+            border-radius: var(--mobile-radius-xl);
+            padding: 12px;
+            box-shadow: var(--mobile-shadow-sm);
+            overflow: hidden;
+        }
+        .calendar-month-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--mobile-text-primary);
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            margin-bottom: 4px;
+        }
+        .calendar-weekday {
+            text-align: center;
+            font-size: 11px;
+            color: var(--mobile-text-tertiary);
+            padding: 4px 0;
+        }
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 2px;
+        }
+        .calendar-day.empty {
+            cursor: default;
+        }
+        .calendar-day:not(.empty):active {
+            transform: scale(0.95);
+            background: var(--mobile-bg-hover);
+        }
+        .calendar-day.has-record {
+            background: transparent;
+        }
+        .calendar-day.today {
+            border: none;
+        }
+        .calendar-day .day-num {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--mobile-text-primary);
+        }
+        .calendar-day.has-record .day-num {
+            font-weight: 700;
+            color: var(--mobile-secondary);
+        }
+        .day-marks {
+            display: flex;
+            flex-direction: row;
+            gap: 2px;
+            margin-top: 2px;
+            align-items: center;
+            justify-content: center;
+        }
+        .mark {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .mark .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+        .mark.lunch .dot {
+            background: #f59e0b; /* 黄色 - 午餐 */
+        }
+        .mark.dinner .dot {
+            background: #3b82f6; /* 蓝色 - 晚餐 */
+        }
+        .mark.guest .dot {
+            background: #10b981; /* 绿色 - 客餐 */
+        }
+
+        /* 日历统计卡片 */
+        .calendar-stats {
+            display: flex;
+            gap: 8px;
+            padding: 0 4px;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+        .calendar-stat-card {
+            flex: 1;
+            padding: 12px 8px;
+            border-radius: var(--mobile-radius-lg);
+            text-align: center;
+            background: var(--mobile-bg-secondary);
+        }
+        .calendar-stat-card.lunch {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+        }
+        .calendar-stat-card.dinner {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        }
+        .calendar-stat-card.guest {
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        }
+        .calendar-stat-label {
+            font-size: 11px;
+            color: var(--mobile-text-secondary);
+            margin-bottom: 2px;
+            font-weight: 600;
+        }
+        .calendar-stat-value {
+            font-size: 18px;
+            font-weight: 800;
+        }
+        .calendar-stat-card.lunch .calendar-stat-value { color: #92400e; }
+        .calendar-stat-card.dinner .calendar-stat-value { color: #1e40af; }
+        .calendar-stat-card.guest .calendar-stat-value { color: #065f46; }
+
+        /* 日历展开样式 */
+        .calendar-container.expanded {
+            position: relative;
+            z-index: 1000;
+        }
+        .calendar-container.expanded .calendar-stats {
+            flex-shrink: 0;
+        }
+        .calendar-container.expanded .calendar-month {
+            flex-shrink: 0;
+            background: var(--mobile-bg-card);
+            border-radius: var(--mobile-radius-xl);
+            padding: 12px;
+        }
+        .calendar-container.expanded .calendar-weekdays {
+            margin-bottom: 8px;
+        }
+        .calendar-container.expanded .calendar-weekday {
+            font-size: 12px;
+            padding: 4px 0;
+        }
+        .calendar-container.expanded .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0;
+        }
+        .calendar-container.expanded .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0;
+        }
+        .calendar-container.expanded .calendar-day {
+            aspect-ratio: auto;
+            height: auto;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 4px 2px;
+            border-radius: 0;
+            min-width: 0;
+        }
+        .calendar-container.expanded .calendar-weekday {
+            min-width: 0;
+            font-size: 12px;
+            text-align: center;
+        }
+        .calendar-container.expanded .day-num {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--mobile-text-primary);
+            text-align: center;
+            align-self: center;
+        }
+        .calendar-container.expanded .day-stats-expanded {
+            display: none;
+        }
+        .calendar-day .day-stats-expanded {
+            display: none;
+        }
+        .calendar-container.expanded .calendar-day .day-stats-expanded {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            align-self: flex-start;
+            width: 100%;
+        }
+        .calendar-container.expanded .day-stats-expanded span {
+            display: block;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            min-width: 36px;
+            text-align: left;
+        }
+        .calendar-container.expanded .day-stats-expanded .lunch { background: #fef3c7; color: #92400e; }
+        .calendar-container.expanded .day-stats-expanded .dinner { background: #dbeafe; color: #1e40af; }
+        .calendar-container.expanded .day-stats-expanded .guest { background: #d1fae5; color: #065f46; }
+        .calendar-container.expanded .calendar-day:not(.has-record) .day-stats-expanded {
+            display: none;
+        }
+        .calendar-container.expanded .calendar-day:not(.has-record) .day-num {
+            opacity: 0.3;
+        }
+        .calendar-container.expanded .calendar-day .day-marks {
+            display: none;
+        }
+        .calendar-container.expanded .calendar-close-btn {
+            display: flex;
+        }
+        .calendar-close-btn {
+            display: none;
+            position: absolute;
+            top: -50px;
+            right: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--mobile-bg-secondary);
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 日期弹窗 */
+        .day-records-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85%;
+            max-width: 340px;
+            background: var(--mobile-bg-card);
+            border-radius: var(--mobile-radius-xl);
+            z-index: 1001;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .day-records-inline {
+            background: var(--mobile-bg-card);
+            border-radius: var(--mobile-radius-lg);
+            padding: 12px 16px;
+            margin-top: 8px;
+            box-shadow: var(--mobile-shadow-sm);
+        }
+        .day-records-inline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--mobile-text-primary);
+            margin-bottom: 8px;
+        }
+        .day-records-inline-header .close-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--mobile-bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: var(--mobile-text-tertiary);
+            cursor: pointer;
+        }
+        .day-records-inline-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .day-records-inline-stats .stat-item {
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .day-records-inline-stats .stat-item.lunch { color: #92400e; }
+        .day-records-inline-stats .stat-item.dinner { color: #1e40af; }
+        .day-records-inline-stats .stat-item.guest { color: #065f46; }
+        .day-records-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--mobile-border);
+        }
+        .day-records-date {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--mobile-text-primary);
+        }
+        .day-records-close {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--mobile-bg-page);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: var(--mobile-text-tertiary);
+            cursor: pointer;
+        }
+        .day-records-summary {
+            display: flex;
+            padding: 16px 20px;
+            gap: 8px;
+            border-bottom: 1px solid var(--mobile-border);
+        }
+        .summary-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px 8px;
+            border-radius: var(--mobile-radius-lg);
+            font-size: 12px;
+            color: var(--mobile-text-secondary);
+            line-height: 1.4;
+        }
+        .summary-item strong {
+            font-size: 16px;
+            display: block;
+            margin-top: 2px;
+        }
+        .summary-item small {
+            font-size: 10px;
+            opacity: 0.8;
+        }
+        .summary-item.lunch {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #92400e;
+        }
+        .summary-item.dinner {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            color: #1e40af;
+        }
+        .summary-item.guest {
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+            color: #065f46;
+        }
+        .day-records-body {
+            padding: 12px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .day-record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--mobile-bg-page);
+            border-radius: var(--radius-md);
+        }
+        .day-record-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .day-record-icon {
+            font-size: 24px;
+        }
+        .day-record-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .day-record-type {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--mobile-text-primary);
+        }
+        .day-record-title {
+            font-size: 12px;
+            color: var(--mobile-text-tertiary);
+        }
+        .day-record-right {
+            text-align: right;
+        }
+        .day-record-count {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--mobile-primary);
+        }
+        .day-record-guest {
+            font-size: 11px;
+            color: var(--mobile-text-tertiary);
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div id="loading" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">加载中...</div>
+        </div>
+        <div id="content"></div>
+    </div>
+
+    <script>
+        const API = window.location.origin + '/api';
+        let token = localStorage.getItem('employee_token');
+        let currentActivity = null;
+        let canGuest = false;
+        let todayDate = new Date();
+        let signupData = { mealType: 'lunch', count: 0 };
+
+        if (!token) {
+            window.location.href = 'index.html';
+        }
+
+        function formatDate(d) {
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        function getWeekday(d) {
+            return ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+        }
+
+        function getMonthDay(d) {
+            return `${d.getMonth()+1}月${d.getDate()}日`;
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2000);
+        }
+
+        function loadMeals() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('content').innerHTML = '<div style="padding:20px;text-align:center;color:#666;">加载中...</div>';
+            fetch(`${API}/meal/list`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                if (data.code === 0 && data.data && data.data.length > 0) {
+                    currentActivity = data.data[0];
+                    canGuest = currentActivity.canGuestMeal === 1;
+                    renderMainPage();
+                } else {
+                    document.getElementById('content').innerHTML = '<div style="padding:20px;text-align:center;color:#666;">暂无报餐活动</div>';
+                }
+            })
+            .catch((err) => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').innerHTML = '<div style="padding:20px;text-align:center;color:#666;">加载失败，请刷新重试</div>';
+                console.error(err);
+            });
+        }
+
+        function renderMainPage() {
+            document.body.style.overflow = '';
+            const monthDay = getMonthDay(todayDate);
+            const weekday = getWeekday(todayDate);
+            const act = currentActivity;
+            // 可报餐时间范围 - 只显示当前可报的餐别
+            let signupTimeRange = '';
+            if (act) {
+                if (act.canSignupLunch && act.canSignupDinner) {
+                    signupTimeRange = `${act.lunch_signup_start}-${act.lunch_signup_end} / ${act.dinner_signup_start}-${act.dinner_signup_end}`;
+                } else if (act.canSignupLunch) {
+                    signupTimeRange = `午餐 ${act.lunch_signup_start}-${act.lunch_signup_end}`;
+                } else if (act.canSignupDinner) {
+                    signupTimeRange = `晚餐 ${act.dinner_signup_start}-${act.dinner_signup_end}`;
+                } else {
+                    signupTimeRange = '已过报餐时间';
+                }
+            }
+            const isSpecial = act?.is_temporary === 1;
+            const dateBg = isSpecial ? 'var(--mobile-success)' : 'var(--mobile-primary)';
+            const dateShadow = isSpecial ? 'rgba(16,185,129,0.35)' : 'rgba(255,183,0,0.35)';
+
+            // 今日报餐状态
+            const todayEmployeeLunch = currentActivity.todayEmployeeLunch;
+            const todayEmployeeDinner = currentActivity.todayEmployeeDinner;
+            const todayGuestLunches = currentActivity.todayGuestLunches || [];
+            const todayGuestDinners = currentActivity.todayGuestDinners || [];
+            const hasSigned = (todayEmployeeLunch?.employee_count > 0 || todayEmployeeDinner?.employee_count > 0 ||
+                              todayGuestLunches.length > 0 || todayGuestDinners.length > 0);
+            const lunchTotal = (todayEmployeeLunch?.employee_count || 0) + todayGuestLunches.reduce((sum, g) => sum + (g.guest_count || 0), 0);
+            const dinnerTotal = (todayEmployeeDinner?.employee_count || 0) + todayGuestDinners.reduce((sum, g) => sum + (g.guest_count || 0), 0);
+
+            let html = `
+
+                <div class="card today-card animate__animated animate__zoomIn">
+                    <div class="today-header">
+                        <div class="today-date" style="background:${dateBg};box-shadow:0 4px 12px ${dateShadow};">
+                            <div class="today-day">${todayDate.getDate()}</div>
+                            <div class="today-month">${todayDate.getMonth()+1}月</div>
+                        </div>
+                        <div class="today-center">
+                            <div class="today-status-big">报餐中</div>
+                            <div class="today-range">${signupTimeRange}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-container">
+                    <div class="card quick-item animate__animated animate__fadeInUp animate__delay-1s" onclick="showRecords()">
+                        <div class="quick-icon blue">📝</div>
+                        <div class="quick-content">
+                            <div class="quick-title">报餐记录</div>
+                            <div class="quick-desc">查看我的报餐记录</div>
+                        </div>
+                        <div class="quick-arrow">›</div>
+                    </div>
+
+                    <div class="meal-record-divider"></div>
+
+                    ${!hasSigned ? `
+                    <div class="sub-card">
+                        <div class="info-card-content">
+                            <div class="info-empty-row">
+                                <span class="info-empty-tag">今日未报餐</span>
+                                <span class="info-empty-hint">点击下方按钮进行报餐</span>
+                            </div>
+                        </div>
+                    </div>
+                    ` : (todayEmployeeLunch || todayEmployeeDinner || todayGuestLunches.length > 0 || todayGuestDinners.length > 0) ? `
+                    ${todayEmployeeLunch ? `
+                    <div class="swipe-container" data-record-id="${todayEmployeeLunch.id}">
+                        <div class="swipe-action-left" onclick="cancelByRecordId(${todayEmployeeLunch.id})"><span class="trash-icon"></span></div>
+                        <div class="swipe-card">
+                            <div class="info-row">
+                                <span class="info-check">员工午餐</span>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    ${todayGuestLunches.map(g => `
+                    <div class="swipe-container" data-record-id="${g.id}">
+                        <div class="swipe-action-left" onclick="cancelByRecordId(${g.id})"><span class="trash-icon"></span></div>
+                        <div class="swipe-card">
+                            <div class="info-row">
+                                <span class="info-check">客餐午餐</span>
+                                <span class="info-count">${g.guest_count}人</span>
+                                <span class="info-reason">${g.reason || ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                    `).join('')}
+                    ${todayEmployeeDinner ? `
+                    <div class="swipe-container" data-record-id="${todayEmployeeDinner.id}">
+                        <div class="swipe-action-left" onclick="cancelByRecordId(${todayEmployeeDinner.id})"><span class="trash-icon"></span></div>
+                        <div class="swipe-card">
+                            <div class="info-row">
+                                <span class="info-check">员工晚餐</span>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    ${todayGuestDinners.map(g => `
+                    <div class="swipe-container" data-record-id="${g.id}">
+                        <div class="swipe-action-left" onclick="cancelByRecordId(${g.id})"><span class="trash-icon"></span></div>
+                        <div class="swipe-card">
+                            <div class="info-row">
+                                <span class="info-check">客餐晚餐</span>
+                                <span class="info-count">${g.guest_count}人</span>
+                                <span class="info-reason">${g.reason || ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                    `).join('')}
+                    ` : ''}
+                </div>
+
+                <div class="card animate__animated animate__slideInUp animate__delay-2s">
+                    <div class="meal-card" onclick="showEmployeeSignup()">
+                        <div class="meal-card-icon"><img src="icons/icon-employee.png" alt="员工餐"></div>
+                        <div class="meal-card-content">
+                            <div class="meal-card-title">员工餐</div>
+                            <div class="meal-card-desc">午餐 / 晚餐 快捷报名</div>
+                        </div>
+                        <div class="meal-card-arrow">›</div>
+                    </div>
+
+                    <div class="meal-card-divider"></div>
+
+                    ${canGuest ? `
+                    <div class="meal-card" onclick="showGuestSignup()">
+                        <div class="meal-card-icon"><img src="icons/icon-guest.png" alt="客餐"></div>
+                        <div class="meal-card-content">
+                            <div class="meal-card-title">客餐</div>
+                            <div class="meal-card-desc">招待来访客人</div>
+                        </div>
+                        <div class="meal-card-arrow">›</div>
+                    </div>
+                    ` : ''}
+                </div>
+
+                <div class="bottom-hint animate__animated animate__fadeIn animate__delay-3s">
+                    <span>兴利汽车模具© 2026</span>
+                </div>
+            `;
+            document.getElementById('content').innerHTML = html;
+            initSwipeHandlers();
+        }
+
+        // 右滑取消报餐
+        let currentSwipedContainer = null;
+        const MAX_SWIPE = 80;
+        const THRESHOLD = 40;
+
+        function initSwipeHandlers() {
+            const containers = document.querySelectorAll('.swipe-container');
+
+            containers.forEach(container => {
+                const card = container.querySelector('.swipe-card');
+                if (!card) return;
+
+                let startX = 0;
+                let startY = 0;
+                let startTime = 0;
+                let currentX = 0;
+                let currentY = 0;
+                let isDragging = false;
+                let isHorizontalSwipe = false;
+                let lastMoveTime = 0;
+                let lastMoveX = 0;
+                let velocity = 0;
+
+                const closeOtherCards = () => {
+                    if (currentSwipedContainer && currentSwipedContainer !== container) {
+                        currentSwipedContainer.classList.remove('swiped-left', 'swiping');
+                        currentSwipedContainer.querySelector('.swipe-card').style.transform = '';
+                        const action = currentSwipedContainer.querySelector('.swipe-action-left');
+                        if (action) {
+                            action.style.opacity = '0';
+                            action.style.transform = 'translateY(-50%) scale(0.8)';
+                        }
+                    }
+                    currentSwipedContainer = null;
+                };
+
+                container.addEventListener('pointerdown', (e) => {
+                    if (e.target.closest('.swipe-action-left')) return;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startTime = Date.now();
+                    isDragging = true;
+                    isHorizontalSwipe = false;
+                    lastMoveTime = startTime;
+                    lastMoveX = startX;
+                    velocity = 0;
+                    container.setPointerCapture(e.pointerId);
+                    container.classList.add('swiping');
+                    closeOtherCards();
+                });
+
+                container.addEventListener('pointermove', (e) => {
+                    if (!isDragging) return;
+
+                    currentX = e.clientX;
+                    currentY = e.clientY;
+                    const diffX = currentX - startX;
+                    const diffY = currentY - startY;
+
+                    // 计算速度（带方向）
+                    const now = Date.now();
+                    const dt = now - lastMoveTime;
+                    if (dt > 0) {
+                        velocity = (currentX - lastMoveX) / dt * 1000; // 像素/秒，左滑为负
+                    }
+                    lastMoveTime = now;
+                    lastMoveX = currentX;
+
+                    if (!isHorizontalSwipe && (Math.abs(diffX) > 5 || Math.abs(diffY) > 5)) {
+                        // 只有左滑且横向距离大于纵向距离时才进入水平滑动模式
+                        isHorizontalSwipe = diffX < 0 && Math.abs(diffX) > Math.abs(diffY);
+                    }
+
+                    if (!isHorizontalSwipe) return;
+
+                    e.preventDefault();
+
+                    // 只处理左滑，右滑时卡片保持在原位
+                    let offset = diffX;
+                    if (offset >= 0) {
+                        // 右滑，卡片不动
+                        offset = 0;
+                    } else {
+                        // 左滑，跟随手指，限制最大距离
+                        if (offset < -MAX_SWIPE) {
+                            offset = -MAX_SWIPE;
+                        }
+                    }
+
+                    card.style.transform = `translateX(${offset}px)`;
+
+                    // 动态更新圆形大小和透明度
+                    const action = container.querySelector('.swipe-action-left');
+                    if (action && offset < 0) {
+                        const progress = Math.min(Math.abs(offset) / 40, 1);
+                        const opacity = 0.3 + progress * 0.7;
+                        const scale = 0.8 + progress * 0.2;
+                        action.style.opacity = opacity;
+                        action.style.transform = `translateY(-50%) scale(${scale})`;
+                    }
+
+                    currentSwipedContainer = container;
+                });
+
+                container.addEventListener('pointerup', () => {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    container.classList.remove('swiping');
+
+                    const diffX = currentX - startX;
+                    const fastSwipe = velocity < -40; // 速度小于-40px/s视为快速左滑
+
+                    if (diffX < -8 || fastSwipe) {
+                        // 左滑显示取消 - 直接到位，不回弹
+                        container.classList.add('swiped-left');
+                        const action = container.querySelector('.swipe-action-left');
+                        if (action) {
+                            action.style.opacity = '1';
+                            action.style.transform = 'translateY(-50%) scale(1)';
+                        }
+                        currentSwipedContainer = container;
+                    } else {
+                        // 右滑或点击恢复，弹回
+                        container.classList.remove('swiped-left');
+                        card.style.transform = '';
+                        const action = container.querySelector('.swipe-action-left');
+                        if (action) {
+                            action.style.opacity = '0';
+                            action.style.transform = 'translateY(-50%) scale(0.8)';
+                        }
+                        currentSwipedContainer = null;
+                    }
+                });
+
+                container.addEventListener('pointercancel', () => {
+                    isDragging = false;
+                    container.classList.remove('swiping', 'swiped-left');
+                    card.style.transform = '';
+                    const action = container.querySelector('.swipe-action-left');
+                    if (action) {
+                        action.style.opacity = '0';
+                        action.style.transform = 'translateY(-50%) scale(0.8)';
+                    }
+                    currentSwipedContainer = null;
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                // 点击取消按钮本身不关闭卡片，由onclick处理
+                if (currentSwipedContainer && !e.target.closest('.swipe-action-left')) {
+                    currentSwipedContainer.classList.remove('swiped-left', 'swiped-right');
+                    const card = currentSwipedContainer.querySelector('.swipe-card');
+                    if (card) card.style.transform = '';
+                    const action = currentSwipedContainer.querySelector('.swipe-action-left');
+                    if (action) {
+                        action.style.opacity = '0';
+                        action.style.transform = 'translateY(-50%) scale(0.8)';
+                    }
+                    currentSwipedContainer = null;
+                }
+            });
+        }
+
+        function showEmployeeSignup() {
+            const todayEmployeeLunch = currentActivity.todayEmployeeLunch;
+            const todayEmployeeDinner = currentActivity.todayEmployeeDinner;
+            const hasLunchSignup = todayEmployeeLunch?.employee_count > 0;
+            const hasDinnerSignup = todayEmployeeDinner?.employee_count > 0;
+
+            // 午餐、晚餐各只能申报一次，都报过了则提示
+            if (hasLunchSignup && hasDinnerSignup) {
+                showToast('午餐和晚餐已报餐，请滑动卡片取消');
+                return;
+            }
+
+            // 默认选未报餐的餐次
+            const defaultMealType = hasLunchSignup ? 'dinner' : 'lunch';
+            signupData = {
+                mealType: defaultMealType,
+                count: 1,
+                lunchCount: todayEmployeeLunch?.employee_count || 0,
+                dinnerCount: todayEmployeeDinner?.employee_count || 0,
+                hasLunchSignup,
+                hasDinnerSignup
+            };
+            history.pushState({ page: 'employee' }, '', location.href);
+            renderEmployeePage();
+        }
+
+        function showGuestSignup() {
+            history.pushState({ page: 'guest' }, '', location.href);
+            renderGuestPage();
+        }
+
+        function showRecords() {
+            history.pushState({ page: 'records' }, '', location.href);
+            loadMyRecords();
+        }
+
+        // 处理浏览器返回按钮
+        window.addEventListener('popstate', (e) => {
+            if (e.state && e.state.page === 'employee') {
+                renderEmployeePage();
+            } else if (e.state && e.state.page === 'guest') {
+                renderGuestPage();
+            } else if (e.state && e.state.page === 'records') {
+                loadMyRecords();
+            } else {
+                // 默认返回主页
+                renderMainPage();
+            }
+        });
+
+        async function loadMyRecords() {
+            try {
+                const res = await fetch('/api/meal/my-records?limit=20', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.code === 0) {
+                    renderRecordsPage(data.data || []);
+                } else {
+                    alert(data.msg || '获取记录失败');
+                }
+            } catch (err) {
+                console.error('获取报餐记录失败:', err);
+                alert('获取记录失败');
+            }
+        }
+
+        function renderRecordsPage(records) {
+            // 按日期分组
+            const recordsByDate = {};
+            records.forEach(r => {
+                if (!recordsByDate[r.signup_date]) {
+                    recordsByDate[r.signup_date] = [];
+                }
+                recordsByDate[r.signup_date].push(r);
+            });
+
+            // 获取所有有记录的月份
+            const months = [...new Set(records.map(r => r.signup_date.substring(0, 7)))].sort().reverse();
+
+            if (records.length === 0) {
+                document.getElementById('content').innerHTML = `
+                    <div class="card animate__animated animate__fadeIn">
+                        <div class="empty-state">
+                            <div class="empty-icon">📅</div>
+                            <div class="empty-text">暂无报餐记录</div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // 计算总体统计
+            const totalLunch = records.filter(r => r.meal_type === 'lunch').reduce((sum, r) => sum + (r.employee_count || 0), 0);
+            const totalDinner = records.filter(r => r.meal_type === 'dinner').reduce((sum, r) => sum + (r.employee_count || 0), 0);
+            const totalGuestLunch = records.filter(r => r.meal_type === 'lunch').reduce((sum, r) => sum + (r.guest_count || 0), 0);
+            const totalGuestDinner = records.filter(r => r.meal_type === 'dinner').reduce((sum, r) => sum + (r.guest_count || 0), 0);
+
+            let html = `<div class="calendar-container" id="calendarContainer">
+                <button class="calendar-close-btn" onclick="closeCalendarExpanded()">×</button>
+                <div class="calendar-stats">
+                    <div class="calendar-stat-card lunch">
+                        <div class="calendar-stat-label">午餐</div>
+                        <div class="calendar-stat-value">${totalLunch}</div>
+                    </div>
+                    <div class="calendar-stat-card dinner">
+                        <div class="calendar-stat-label">晚餐</div>
+                        <div class="calendar-stat-value">${totalDinner}</div>
+                    </div>
+                    <div class="calendar-stat-card guest">
+                        <div class="calendar-stat-label">客餐</div>
+                        <div class="calendar-stat-value">${totalGuestLunch + totalGuestDinner}</div>
+                    </div>
+                </div>
+            `;
+
+            months.forEach(month => {
+                const [year, m] = month.split('-');
+                const monthName = parseInt(m) + '月';
+                const daysInMonth = new Date(year, parseInt(m), 0).getDate();
+                const firstDayOfMonth = new Date(year, parseInt(m) - 1, 1).getDay();
+
+                html += `
+                    <div class="calendar-month">
+                        <div class="calendar-month-title">${year}年${monthName}</div>
+                        <div class="calendar-weekdays">
+                            <div class="calendar-weekday">日</div>
+                            <div class="calendar-weekday">一</div>
+                            <div class="calendar-weekday">二</div>
+                            <div class="calendar-weekday">三</div>
+                            <div class="calendar-weekday">四</div>
+                            <div class="calendar-weekday">五</div>
+                            <div class="calendar-weekday">六</div>
+                        </div>
+                        <div class="calendar-days">
+                `;
+
+                // 填充空白
+                for (let i = 0; i < firstDayOfMonth; i++) {
+                    html += `<div class="calendar-day empty"></div>`;
+                }
+
+                // 填充日期
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dateStr = `${year}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const dayRecords = recordsByDate[dateStr] || [];
+                    const hasLunch = dayRecords.some(r => r.meal_type === 'lunch');
+                    const hasDinner = dayRecords.some(r => r.meal_type === 'dinner');
+                    const hasGuest = dayRecords.some(r => (r.guest_count || 0) > 0);
+                    const isToday = dateStr === formatDate(new Date());
+
+                    // 计算当天各项数量
+                    const lunchEmp = dayRecords.filter(r => r.meal_type === 'lunch').reduce((sum, r) => sum + (r.employee_count || 0), 0);
+                    const dinnerEmp = dayRecords.filter(r => r.meal_type === 'dinner').reduce((sum, r) => sum + (r.employee_count || 0), 0);
+                    const lunchGuest = dayRecords.filter(r => r.meal_type === 'lunch').reduce((sum, r) => sum + (r.guest_count || 0), 0);
+                    const dinnerGuest = dayRecords.filter(r => r.meal_type === 'dinner').reduce((sum, r) => sum + (r.guest_count || 0), 0);
+
+                    let dayClass = 'calendar-day';
+                    if (hasLunch || hasDinner || hasGuest) dayClass += ' has-record';
+                    if (isToday) dayClass += ' today';
+
+                    html += `
+                        <div class="${dayClass}" onclick="showDayRecords('${dateStr}')">
+                            <div class="day-num">${day}</div>
+                            <div class="day-marks">
+                                ${hasLunch ? '<div class="mark lunch"><span class="dot"></span></div>' : ''}
+                                ${hasDinner ? '<div class="mark dinner"><span class="dot"></span></div>' : ''}
+                                ${hasGuest ? '<div class="mark guest"><span class="dot"></span></div>' : ''}
+                            </div>
+                            <div class="day-stats-expanded">
+                                <span class="lunch">午餐:${lunchEmp}</span>
+                                <span class="dinner">晚餐:${dinnerEmp}</span>
+                                <span class="guest">客餐:${lunchGuest + dinnerGuest}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `</div></div>`;
+            });
+
+            html += `</div>`;
+            document.getElementById('content').innerHTML = html;
+
+            // 添加下滑展开功能
+            initCalendarExpansion();
+        }
+
+        function initCalendarExpansion() {
+            const container = document.getElementById('calendarContainer');
+            if (!container) return;
+
+            let startY = 0;
+            let startScroll = 0;
+            let isExpanded = false;
+
+            container.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                startScroll = container.scrollTop;
+                isExpanded = container.classList.contains('expanded');
+            }, { passive: true });
+
+            container.addEventListener('touchmove', (e) => {
+                const currentY = e.touches[0].clientY;
+                const diff = currentY - startY;
+
+                if (isExpanded) {
+                    // 展开状态下，上滑超过60px收起
+                    if (diff < -60) {
+                        closeCalendarExpanded();
+                        isExpanded = false;
+                    }
+                } else {
+                    // 收起状态下，下滑超过60px展开
+                    if (container.scrollTop === 0 && diff > 60) {
+                        expandCalendar();
+                        isExpanded = true;
+                    }
+                }
+            }, { passive: true });
+        }
+
+        function expandCalendar() {
+            const container = document.getElementById('calendarContainer');
+            if (container) {
+                container.classList.add('expanded');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeCalendarExpanded() {
+            const container = document.getElementById('calendarContainer');
+            if (container) {
+                container.classList.remove('expanded');
+                document.body.style.overflow = '';
+                closeDayRecords();
+            }
+        }
+
+        function showDayRecords(dateStr) {
+            // 展开状态下不响应点击
+            const container = document.getElementById('calendarContainer');
+            if (container && container.classList.contains('expanded')) return;
+
+            const records = window.currentRecords || [];
+            const dayRecords = records.filter(r => r.signup_date === dateStr);
+
+            if (dayRecords.length === 0) return;
+
+            const date = new Date(dateStr);
+            const weekday = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()];
+
+            // 计算当天统计
+            const lunchEmp = dayRecords.filter(r => r.meal_type === 'lunch').reduce((sum, r) => sum + (r.employee_count || 0), 0);
+            const dinnerEmp = dayRecords.filter(r => r.meal_type === 'dinner').reduce((sum, r) => sum + (r.employee_count || 0), 0);
+            const lunchGuest = dayRecords.filter(r => r.meal_type === 'lunch').reduce((sum, r) => sum + (r.guest_count || 0), 0);
+            const dinnerGuest = dayRecords.filter(r => r.meal_type === 'dinner').reduce((sum, r) => sum + (r.guest_count || 0), 0);
+
+            const html = `
+                <div class="day-records-inline animate__animated animate__fadeIn">
+                    <div class="day-records-inline-header">
+                        <span>${dateStr} ${weekday}</span>
+                        <span class="close-btn" onclick="closeDayRecords()">×</span>
+                    </div>
+                    <div class="day-records-inline-stats">
+                        <div class="stat-item lunch">午餐: ${lunchEmp}人${lunchGuest > 0 ? ' +' + lunchGuest + '客' : ''}</div>
+                        <div class="stat-item dinner">晚餐: ${dinnerEmp}人${dinnerGuest > 0 ? ' +' + dinnerGuest + '客' : ''}</div>
+                        <div class="stat-item guest">客餐: ${lunchGuest + dinnerGuest}人</div>
+                    </div>
+                </div>
+            `;
+
+            closeDayRecords();
+            const container2 = document.getElementById('calendarContainer');
+            if (container2) {
+                const popup = document.createElement('div');
+                popup.id = 'dayRecordsPopup';
+                popup.innerHTML = html;
+                container2.appendChild(popup);
+            }
+        }
+
+        function closeDayRecords() {
+            const popup = document.getElementById('dayRecordsPopup');
+            if (popup) popup.remove();
+        }
+
+        function loadMyRecords() {
+            window.currentRecords = [];
+            fetch('/api/meal/my-records?limit=50', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).then(res => res.json()).then(data => {
+                if (data.code === 0) {
+                    window.currentRecords = data.data || [];
+                    renderRecordsPage(window.currentRecords);
+                }
+            });
+        }
+
+        function renderEmployeePage() {
+            document.body.style.overflow = 'hidden';
+            const act = currentActivity;
+            const type = signupData.mealType;
+            const isLunch = type === 'lunch';
+            const timeRange = isLunch
+                ? `${act.lunch_signup_start} - ${act.lunch_signup_end}`
+                : `${act.dinner_signup_start} - ${act.dinner_signup_end}`;
+            const icon = isLunch ? '🍱' : '🍚';
+            const headerClass = isLunch ? 'yellow' : 'green';
+
+            document.getElementById('content').innerHTML = `
+                <div class="card signup-card animate__animated animate__zoomIn">
+                    <div class="signup-header ${headerClass}">
+                        <div class="signup-header-icon"><img src="icons/icon-employee.png" alt="员工餐"></div>
+                        <div class="signup-header-title">${isLunch ? '午餐' : '晚餐'}报名</div>
+                        <div class="signup-header-time">${formatDate(todayDate)} ${getWeekday(todayDate)} · ${timeRange}</div>
+                    </div>
+                    <div class="signup-body">
+                        <div class="signup-fixed-count">1份</div>
+
+                        <div class="signup-section-title">选择餐段</div>
+                        <div class="type-switch">
+                            <div class="type-btn ${isLunch ? 'active lunch' : ''}" onclick="switchType('lunch')">午餐</div>
+                            <div class="type-btn ${!isLunch ? 'active dinner' : ''}" onclick="switchType('dinner')">晚餐</div>
+                        </div>
+
+                        <button class="submit-btn primary" onclick="submitEmployee()">
+                            ${signupData.count > 0 ? '确认报餐' : '确认报名'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function switchType(type) {
+            signupData.mealType = type;
+            signupData.count = 1;
+            const todayEmployeeLunch = currentActivity.todayEmployeeLunch;
+            const todayEmployeeDinner = currentActivity.todayEmployeeDinner;
+            signupData.lunchCount = todayEmployeeLunch?.employee_count || 0;
+            signupData.dinnerCount = todayEmployeeDinner?.employee_count || 0;
+            signupData.hasLunchSignup = todayEmployeeLunch?.employee_count > 0;
+            signupData.hasDinnerSignup = todayEmployeeDinner?.employee_count > 0;
+            renderEmployeePage();
+        }
+
+        function changeCount(delta) {
+            signupData.count = Math.min(1, Math.max(0, signupData.count + delta));
+            document.getElementById('countValue').textContent = signupData.count;
+            const btn = document.querySelector('.submit-btn');
+            if (btn) {
+                btn.textContent = signupData.count > 0 ? '确认报餐' : '确认报名';
+            }
+        }
+
+        function submitEmployee() {
+            const total = signupData.count;
+            const mealType = signupData.mealType;
+
+            // 检查是否已报过该餐次
+            if ((mealType === 'lunch' && signupData.hasLunchSignup) ||
+                (mealType === 'dinner' && signupData.hasDinnerSignup)) {
+                showToast('该餐次已报餐，请滑动卡片取消后再试');
+                return;
+            }
+
+            fetch(`${API}/meal/${currentActivity.id}/signup`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    date: formatDate(todayDate),
+                    lunch_employee: mealType === 'lunch' ? total : (signupData.lunchCount || 0),
+                    dinner_employee: mealType === 'dinner' ? total : (signupData.dinnerCount || 0)
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log('报名响应:', data);
+                if (data.code === 0) {
+                    showToast('报名成功');
+                    loadMeals();
+                } else {
+                    alert('错误: ' + (data.msg || '提交失败'));
+                }
+            })
+            .catch((err) => {
+                console.error('请求失败:', err);
+                alert('请求失败: ' + err);
+            });
+        }
+
+        function cancelByRecordId(recordId) {
+            if (!confirm('确定要取消该报餐记录吗？')) {
+                return;
+            }
+            fetch(`${API}/meal/${currentActivity.id}/signup/${recordId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                    showToast('已取消报餐');
+                    loadMeals();
+                } else {
+                    showToast(data.msg || '取消失败');
+                }
+            })
+            .catch(() => showToast('取消失败'));
+        }
+
+        function cancelEmployee() {
+            const mealType = signupData.mealType;
+            if (!confirm('确定要取消今天的' + (mealType === 'lunch' ? '午餐' : '晚餐') + '报名吗？')) {
+                return;
+            }
+            const lunchToSend = mealType === 'lunch' ? 0 : (signupData.lunchCount || 0);
+            const dinnerToSend = mealType === 'dinner' ? 0 : (signupData.dinnerCount || 0);
+            fetch(`${API}/meal/${currentActivity.id}/signup`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    date: formatDate(todayDate),
+                    lunch_employee: lunchToSend,
+                    dinner_employee: dinnerToSend
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                    showToast('已取消报名');
+                    loadMeals();
+                } else {
+                    showToast(data.msg || '取消失败');
+                }
+            })
+            .catch(() => showToast('取消失败'));
+        }
+
+        let guestCount = 0;
+        let guestMealType = 'lunch';
+
+        function renderGuestPage() {
+            document.body.style.overflow = 'hidden';
+            guestMealType = 'lunch';
+            const todayGuestLunches = currentActivity.todayGuestLunches || [];
+            const todayGuestDinners = currentActivity.todayGuestDinners || [];
+            const totalLunchGuest = todayGuestLunches.reduce((sum, g) => sum + (g.guest_count || 0), 0);
+            const totalDinnerGuest = todayGuestDinners.reduce((sum, g) => sum + (g.guest_count || 0), 0);
+            guestCount = 0; // 新申请从0开始
+            const hasLunchGuest = totalLunchGuest > 0;
+            const hasDinnerGuest = totalDinnerGuest > 0;
+
+            document.getElementById('content').innerHTML = `
+                <div class="card signup-card animate__animated animate__zoomIn">
+                    <div class="signup-header green">
+                        <div class="signup-header-icon"><img src="icons/icon-guest.png" alt="客餐"></div>
+                        <div class="signup-header-title">客餐申请</div>
+                        <div class="signup-header-time">${formatDate(todayDate)} ${getWeekday(todayDate)}</div>
+                    </div>
+                    <div class="guest-form">
+                        <div class="type-switch" style="margin-bottom:16px;">
+                            <div class="type-btn active lunch" onclick="switchGuestType('lunch')">午餐</div>
+                            <div class="type-btn dinner" onclick="switchGuestType('dinner')">晚餐</div>
+                        </div>
+                        <div class="form-group" style="text-align:center;color:#666;font-size:13px;">
+                            ${hasLunchGuest || hasDinnerGuest ? `已报客餐 <span id="existingGuestCount">${guestMealType === 'lunch' ? totalLunchGuest : totalDinnerGuest}</span> 人` : '暂无客餐记录'}
+                        </div>
+                        <div class="form-group">
+                            <div class="counter">
+                                <button class="counter-btn minus" onclick="changeGuestCount(-1)">-</button>
+                                <span class="counter-value" id="guestCountValue">0</span>
+                                <button class="counter-btn plus" onclick="changeGuestCount(1)">+</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <textarea class="form-input" id="guestReason" placeholder="请输入报餐原由，如：某某客户来访、供应商考察等"></textarea>
+                        </div>
+                        <button class="submit-btn secondary" onclick="submitGuest()">提交申请</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function switchGuestType(type) {
+            guestMealType = type;
+            const todayGuestLunches = currentActivity.todayGuestLunches || [];
+            const todayGuestDinners = currentActivity.todayGuestDinners || [];
+            const totalLunchGuest = todayGuestLunches.reduce((sum, g) => sum + (g.guest_count || 0), 0);
+            const totalDinnerGuest = todayGuestDinners.reduce((sum, g) => sum + (g.guest_count || 0), 0);
+            const hasLunchGuest = totalLunchGuest > 0;
+            const hasDinnerGuest = totalDinnerGuest > 0;
+
+            // 更新 guestCount 为0，切换餐次时重新计数
+            guestCount = 0;
+            document.getElementById('guestCountValue').textContent = guestCount;
+
+            // 更新已报客餐显示
+            const existingEl = document.getElementById('existingGuestCount');
+            if (existingEl) {
+                existingEl.textContent = type === 'lunch' ? totalLunchGuest : totalDinnerGuest;
+            }
+
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent === '午餐') btn.classList.remove('lunch');
+                if (btn.textContent === '晚餐') btn.classList.remove('dinner');
+            });
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                if ((type === 'lunch' && btn.textContent === '午餐') || (type === 'dinner' && btn.textContent === '晚餐')) {
+                    btn.classList.add('active');
+                    if (type === 'lunch') btn.classList.add('lunch');
+                    if (type === 'dinner') btn.classList.add('dinner');
+                }
+            });
+
+            // Update cancel button visibility
+            const cancelBtn = document.querySelector('.submit-btn.danger');
+            if (cancelBtn) {
+                if ((type === 'lunch' && hasLunchGuest) || (type === 'dinner' && hasDinnerGuest)) {
+                    cancelBtn.style.display = '';
+                } else {
+                    cancelBtn.style.display = 'none';
+                }
+            }
+        }
+
+        function changeGuestCount(delta) {
+            guestCount = Math.max(0, guestCount + delta);
+            document.getElementById('guestCountValue').textContent = guestCount;
+        }
+
+        function cancelGuest() {
+            if (!confirm(`确定要取消今天的${guestMealType === 'lunch' ? '午餐' : '晚餐'}客餐吗？`)) {
+                return;
+            }
+            const todayLunch = currentActivity.todaySignups?.lunch;
+            const todayDinner = currentActivity.todaySignups?.dinner;
+
+            fetch(`${API}/meal/${currentActivity.id}/signup`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    date: formatDate(todayDate),
+                    lunch_guest: guestMealType === 'lunch' ? 0 : (todayLunch?.guest_count || 0),
+                    dinner_guest: guestMealType === 'dinner' ? 0 : (todayDinner?.guest_count || 0)
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                    showToast('已取消客餐');
+                    loadMeals();
+                } else {
+                    showToast(data.msg || '取消失败');
+                }
+            })
+            .catch(() => showToast('取消失败'));
+        }
+
+        function submitGuest() {
+            const reason = document.getElementById('guestReason').value.trim();
+
+            if (guestCount === 0) {
+                showToast('请输入客餐人数');
+                return;
+            }
+            if (!reason) {
+                showToast('请输入报餐原由');
+                return;
+            }
+
+            fetch(`${API}/meal/${currentActivity.id}/signup`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    date: formatDate(todayDate),
+                    lunch_guest: guestMealType === 'lunch' ? guestCount : 0,
+                    dinner_guest: guestMealType === 'dinner' ? guestCount : 0,
+                    guest_reason: reason
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                    showToast('申请成功');
+                    loadMeals();
+                } else {
+                    showToast(data.msg || '提交失败');
+                }
+            })
+            .catch(() => showToast('提交失败'));
+        }
+
+        loadMeals();
+    </script>
+</body>
+</html>

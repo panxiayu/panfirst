@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>考试成绩 - 兴利汽车模具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --ios-bg: #f2f2f7;
+            --ios-card: rgba(255,255,255,0.9);
+            --ios-blue: #007aff;
+            --ios-gray: #8e8e93;
+            --ios-radius: 16px;
+            --ios-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+            --transition: 0.3s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+            background: var(--ios-bg);
+            color: #1c1c1e;
+            padding-bottom: 80px;
+            padding-top: 20px;
+        }
+
+
+
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .ios-card {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 24px;
+            margin-bottom: 12px;
+            box-shadow: var(--ios-shadow);
+        }
+
+        .score-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            border: 6px solid var(--ios-blue);
+        }
+
+        .score-circle.pass { border-color: var(--ios-blue); }
+        .score-circle.fail { border-color: #ff3b30; }
+
+        .score-value {
+            font-size: 42px;
+            font-weight: 700;
+            color: var(--ios-blue);
+        }
+
+        .score-circle.fail .score-value { color: #ff3b30; }
+
+        .score-label {
+            font-size: 13px;
+            color: var(--ios-gray);
+        }
+
+        .result-status {
+            text-align: center;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .result-status.pass { color: var(--ios-blue); }
+        .result-status.fail { color: #ff3b30; }
+
+        .pass-score-info {
+            text-align: center;
+            font-size: 13px;
+            color: var(--ios-gray);
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .info-row:last-child { border-bottom: none; }
+
+        .info-label {
+            font-size: 15px;
+            color: var(--ios-gray);
+        }
+
+        .info-value {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .ios-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 14px;
+            background: var(--ios-blue);
+            color: #fff;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .ios-btn:active { transform: scale(0.97); opacity: 0.9; }
+
+        .ios-btn-secondary {
+            background: rgba(0,122,255,0.1);
+            color: var(--ios-blue);
+        }
+
+        .bottom-nav {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .bottom-nav .ios-btn { flex: 1; }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ios-gray);
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--ios-blue);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading" class="loading" style="display: none;">加载中...</div>
+
+        <div id="resultContent" style="display: none;">
+            <div class="ios-card">
+                <div id="scoreCircle" class="score-circle">
+                    <div id="scoreValue" class="score-value">0</div>
+                    <div class="score-label">总分</div>
+                </div>
+                <div id="resultStatus" class="result-status"></div>
+                <div id="passScoreInfo" class="pass-score-info"></div>
+
+                <div class="info-row">
+                    <span class="info-label">考试名称</span>
+                    <span class="info-value" id="examTitle">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">考试时长</span>
+                    <span class="info-value" id="examDuration">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">正确题数</span>
+                    <span class="info-value" id="correctCount">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">总题数</span>
+                    <span class="info-value" id="totalQuestions">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">及格分数</span>
+                    <span class="info-value" id="passScore">-</span>
+                </div>
+
+                <div class="bottom-nav">
+                    <button class="ios-btn ios-btn-secondary" onclick="goExamList()">返回列表</button>
+                    <button class="ios-btn" id="retryBtn" onclick="retryExam()">重新考试</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin + '/api';
+        let token = localStorage.getItem('employee_token');
+        let examId = null;
+        let resultData = null;
+        let readonly = false;
+
+        function getExamId() {
+            return new URLSearchParams(window.location.search).get('examId');
+        }
+
+        function isReadonly() {
+            return new URLSearchParams(window.location.search).get('readonly') === '1';
+        }
+
+        function goBack() {
+            window.location.href = 'mobile-exam-list.html';
+        }
+
+        function goExamList() {
+            window.location.href = 'mobile-exam-list.html';
+        }
+
+        function retryExam() {
+            if (confirm('确定要重新考试吗？')) {
+                window.location.href = 'mobile-exam-doing.html?id=' + examId;
+            }
+        }
+
+        async function loadResult() {
+            examId = getExamId();
+            readonly = isReadonly();
+
+            if (!examId) { goBack(); return; }
+
+            try {
+                const examRes = await fetch(API + '/exam/' + examId, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const examData = await examRes.json();
+
+                const recordsRes = await fetch(API + '/exam/my-records', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const recordsData = await recordsRes.json();
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (examData.code === 0 && recordsData.code === 0) {
+                    const myRecord = recordsData.data.find(r => r.exam_id == examId);
+                    if (myRecord) {
+                        resultData = myRecord;
+                        renderResult(examData.data, myRecord);
+                    } else if (readonly) {
+                        goBack();
+                    } else {
+                        window.location.href = 'mobile-exam-doing.html?id=' + examId;
+                    }
+                } else {
+                    alert('加载失败');
+                    goBack();
+                }
+            } catch (err) {
+                document.getElementById('loading').textContent = '加载失败';
+            }
+        }
+
+        function renderResult(examData, recordData) {
+            document.getElementById('resultContent').style.display = '';
+
+            document.getElementById('examTitle').textContent = examData.exam.title;
+            document.getElementById('examDuration').textContent = examData.exam.duration + '分钟';
+            document.getElementById('passScore').textContent = examData.exam.pass_score + '分';
+            document.getElementById('totalQuestions').textContent = examData.questions.length + '题';
+
+            const score = recordData.total_score || 0;
+            const isPassed = recordData.is_passed;
+
+            document.getElementById('scoreValue').textContent = score;
+
+            const scoreCircle = document.getElementById('scoreCircle');
+            const resultStatus = document.getElementById('resultStatus');
+
+            if (isPassed) {
+                scoreCircle.classList.add('pass');
+                scoreCircle.classList.remove('fail');
+                resultStatus.classList.add('pass');
+                resultStatus.classList.remove('fail');
+                resultStatus.textContent = '考试通过';
+            } else {
+                scoreCircle.classList.add('fail');
+                scoreCircle.classList.remove('pass');
+                resultStatus.classList.add('fail');
+                resultStatus.classList.remove('pass');
+                resultStatus.textContent = '未通过';
+            }
+
+            document.getElementById('passScoreInfo').textContent = `及格分数：${examData.exam.pass_score}分`;
+            document.getElementById('correctCount').textContent = `${recordData.correctCount || 0}题`;
+
+            if (isPassed || readonly) {
+                document.getElementById('retryBtn').style.display = 'none';
+            } else {
+                document.getElementById('retryBtn').style.display = 'block';
+            }
+        }
+
+        loadResult();
+    </script>
+</body>
+</html>

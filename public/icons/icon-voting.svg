@@ -1,0 +1,130 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 底座渐变 - 天蓝色 -->
+    <linearGradient id="baseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#A8D8F0"/>
+      <stop offset="50%" stop-color="#88C8E8"/>
+      <stop offset="100%" stop-color="#68B8E0"/>
+    </linearGradient>
+
+    <!-- 箱身渐变 -->
+    <linearGradient id="boxGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE8D0"/>
+      <stop offset="100%" stop-color="#FFD0B0"/>
+    </linearGradient>
+
+    <!-- 箱顶渐变 -->
+    <linearGradient id="lidGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF0E0"/>
+      <stop offset="100%" stop-color="#FFE0C8"/>
+    </linearGradient>
+
+    <!-- 票纸渐变 -->
+    <linearGradient id="ballotGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F8F4F0"/>
+    </linearGradient>
+
+    <!-- 对勾渐变 -->
+    <radialGradient id="checkGrad" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#6AE898"/>
+      <stop offset="100%" stop-color="#40CE70"/>
+    </radialGradient>
+
+    <!-- 高光 -->
+    <linearGradient id="gloss" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- 阴影 -->
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+    <filter id="dropShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#4898C0" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- 底座阴影 -->
+  <ellipse cx="64" cy="112" rx="38" ry="10" fill="#68B8E0" opacity="0.3" filter="url(#softBlur)"/>
+
+  <!-- 圆角方形底座 -->
+  <rect x="12" y="12" width="104" height="104" rx="28" fill="url(#baseGrad)"/>
+  <rect x="12" y="12" width="104" height="104" rx="28" fill="url(#gloss)" opacity="0.3"/>
+
+  <!-- 箱身阴影 -->
+  <rect x="28" y="42" width="72" height="62" rx="8" fill="#D09070" opacity="0.3" transform="translate(4, 4)"/>
+
+  <!-- 箱身 -->
+  <rect x="24" y="38" width="72" height="66" rx="8" fill="url(#boxGrad)" filter="url(#dropShadow)"/>
+
+  <!-- 箱身左边高光 -->
+  <rect x="24" y="38" width="10" height="66" rx="5" fill="#FFFFFF" opacity="0.3"/>
+
+  <!-- 箱身顶部边框 -->
+  <rect x="28" y="42" width="64" height="58" rx="6" fill="none" stroke="#FFE0C8" stroke-width="2"/>
+
+  <!-- 投票口阴影 -->
+  <rect x="38" y="26" width="40" height="16" rx="5" fill="#806050" opacity="0.3" transform="translate(3, 3)"/>
+
+  <!-- 投票口 -->
+  <rect x="36" y="24" width="40" height="16" rx="5" fill="#5A4038"/>
+
+  <!-- 投票口内部 -->
+  <rect x="39" y="27" width="34" height="10" rx="3" fill="#3A2820"/>
+
+  <!-- 箱顶阴影 -->
+  <rect x="20" y="14" width="80" height="20" rx="6" fill="#D0A080" opacity="0.3" transform="translate(3, 3)"/>
+
+  <!-- 箱顶 -->
+  <rect x="18" y="12" width="80" height="22" rx="7" fill="url(#lidGrad)"/>
+
+  <!-- 箱顶高光 -->
+  <rect x="20" y="14" width="76" height="10" rx="5" fill="#FFFFFF" opacity="0.4"/>
+
+  <!-- 箱顶边框 -->
+  <rect x="18" y="12" width="80" height="22" rx="7" fill="none" stroke="#FFE0C8" stroke-width="2"/>
+
+  <!-- 选票1 -->
+  <g transform="translate(32, 52)">
+    <!-- 票纸阴影 -->
+    <rect x="3" y="3" width="52" height="36" rx="4" fill="#C0A890" opacity="0.3"/>
+
+    <!-- 票纸 -->
+    <rect x="0" y="0" width="52" height="36" rx="4" fill="url(#ballotGrad)"/>
+
+    <!-- 票纸边框 -->
+    <rect x="0" y="0" width="52" height="36" rx="4" fill="none" stroke="#E8E0D8" stroke-width="1"/>
+
+    <!-- 选项1 - 已选 -->
+    <rect x="6" y="8" width="14" height="14" rx="4" fill="#FFFFFF" stroke="#D0C4B8" stroke-width="1.5"/>
+    <circle cx="13" cy="15" r="6" fill="url(#checkGrad)"/>
+    <path d="M9 15 L12 18 L17 12" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+
+    <!-- 选项1文字 -->
+    <rect x="26" y="10" width="20" height="4" rx="2" fill="#C0B0A0"/>
+    <rect x="26" y="18" width="14" height="3" rx="1.5" fill="#E0D4C8"/>
+
+    <!-- 选项2 - 未选 -->
+    <rect x="6" y="26" width="14" height="14" rx="4" fill="#FFFFFF" stroke="#D0C4B8" stroke-width="1.5"/>
+  </g>
+
+  <!-- 选票2 - 半出 -->
+  <g transform="translate(38, 62)">
+    <!-- 票纸阴影 -->
+    <rect x="2" y="2" width="52" height="36" rx="4" fill="#C0A890" opacity="0.2"/>
+
+    <!-- 票纸 -->
+    <rect x="0" y="0" width="52" height="36" rx="4" fill="url(#ballotGrad)" opacity="0.85"/>
+
+    <!-- 票纸边框 -->
+    <rect x="0" y="0" width="52" height="36" rx="4" fill="none" stroke="#E8E0D8" stroke-width="1" opacity="0.6"/>
+  </g>
+
+  <!-- 箱底阴影 -->
+  <rect x="24" y="100" width="72" height="8" rx="4" fill="#D0B090" opacity="0.4"/>
+
+  <!-- 整体高光 -->
+  <ellipse cx="40" cy="44" rx="22" ry="14" fill="#FFFFFF" opacity="0.25"/>
+</svg>

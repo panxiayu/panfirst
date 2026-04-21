@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>考试管理 - 兴利汽车模具</title>
+    <link rel="stylesheet" href="css/linear.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <span class="page-title">培训管理</span>
+            </div>
+            <div class="toolbar-right" id="toolbarButtons">
+                <!-- 学习任务按钮 -->
+                <span id="btnsTraining" style="display:none;inline-flex;gap:8px;">
+                    <button class="btn btn-primary btn-sm" onclick="showCreateTaskModal()">+ 创建学习资料</button>
+                    <button class="btn btn-danger btn-sm" onclick="batchDeleteTasks()">删除</button>
+                </span>
+                <!-- 考试列表按钮 -->
+                <span id="btnsPapers">
+                    <button class="btn btn-primary btn-sm" onclick="showCreateExamModal()">+ 新建培训</button>
+                </span>
+                <!-- 题库管理按钮 -->
+                <span id="btnsQuestions" style="display:none;">
+                    <button class="btn btn-primary btn-sm" onclick="showQuestionImport()">📥 导入题目</button>
+                </span>
+                <button class="btn btn-secondary btn-sm" onclick="location.href='dashboard.html'">返回</button>
+            </div>
+        </div>
+
+        <div id="examList">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/exam.js"></script>
+</body>
+</html>
