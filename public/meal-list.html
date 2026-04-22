@@ -453,31 +453,26 @@
                         }
                     });
                 } else {
-                    // 常规报餐：按月份分组
+                    // 常规报餐：每个活动独立一张卡片
                     const start = new Date(m.start_date);
-                    const end = new Date(m.end_date);
-                    const current = new Date(start.getFullYear(), start.getMonth(), 1);
+                    const monthKey = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+                    const cardKey = `reg_${m.id}`;
 
-                    while (current <= end) {
-                        const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-                        const year = current.getFullYear();
-                        const month = current.getMonth() + 1;
-                        const monthName = monthNames[month - 1];
-                        const cardKey = `reg_${monthKey}`;
-
-                        if (!cardMap.has(cardKey)) {
-                            cardMap.set(cardKey, { cardKey, monthKey, year, month, monthName, type: 'regular', meals: [], totals: { lunch_employee: 0, lunch_guest: 0, dinner_employee: 0, dinner_guest: 0 } });
+                    cardMap.set(cardKey, {
+                        cardKey,
+                        monthKey,
+                        year: start.getFullYear(),
+                        month: start.getMonth() + 1,
+                        monthName: monthNames[start.getMonth()],
+                        type: 'regular',
+                        meals: [m],
+                        totals: {
+                            lunch_employee: m.statistics.lunch?.employee || 0,
+                            lunch_guest: m.statistics.lunch?.guest || 0,
+                            dinner_employee: m.statistics.dinner?.employee || 0,
+                            dinner_guest: m.statistics.dinner?.guest || 0
                         }
-
-                        const existing = cardMap.get(cardKey);
-                        existing.meals.push(m);
-                        existing.totals.lunch_employee += m.statistics.lunch?.employee || 0;
-                        existing.totals.lunch_guest += m.statistics.lunch?.guest || 0;
-                        existing.totals.dinner_employee += m.statistics.dinner?.employee || 0;
-                        existing.totals.dinner_guest += m.statistics.dinner?.guest || 0;
-
-                        current.setMonth(current.getMonth() + 1);
-                    }
+                    });
                 }
             });
 

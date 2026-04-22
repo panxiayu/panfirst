@@ -20,6 +20,7 @@ const examRoutes = require('./routes/exam');
 const examAdminRoutes = require('./routes/exam-admin');
 const permissionsRoutes = require('./routes/permissions');
 const sixSRoutes = require('./routes/6s');
+const homeworkTimerRoutes = require('./routes/homework-timer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -65,9 +66,10 @@ app.use('/api/permissions', require('./routes/granular-permissions')); // 粒化
 app.use('/api/exam', examRoutes); // 考试相关 API
 app.use('/api/exam-admin', examAdminRoutes); // 考试管理后台 API
 app.use('/api/import', uploadRoutes); // upload 路由
-app.use('/api', importRoutes); // import 通配符路由（必须在最后）
 app.use('/api/files', require('./routes/file-manager')); // 文件管理
 app.use('/api/6s', sixSRoutes); // 6S曝光管理
+app.use('/api/homework-timer', homeworkTimerRoutes); // 作业计时器
+app.use('/api', importRoutes); // import 通配符路由（必须在最后）
 
 // 健康检查
 app.get('/health', (req, res) => {

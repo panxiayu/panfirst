@@ -129,7 +129,11 @@ router.get('/list', authMiddleware, (req, res) => {
         WHERE activity_id = ? AND user_id = ? AND signup_date = ?
       `).all(activity.id, userId, todayStr);
 
-      // 分离员工餐和客餐记录
+      // 分离员工餐和客餐记录（四种数据完全独立）
+      // 员工午餐：meal_type='lunch' 且 employee_count > 0
+      // 员工晚餐：meal_type='dinner' 且 employee_count > 0
+      // 客餐午餐：meal_type='lunch' 且 guest_count > 0
+      // 客餐晚餐：meal_type='dinner' 且 guest_count > 0
       const employeeLunch = signups.find(s => s.meal_type === 'lunch' && s.employee_count > 0);
       const employeeDinner = signups.find(s => s.meal_type === 'dinner' && s.employee_count > 0);
       const guestLunches = signups.filter(s => s.meal_type === 'lunch' && s.guest_count > 0);
@@ -208,7 +212,7 @@ router.get('/my-records', authMiddleware, (req, res) => {
     const limit = parseInt(req.query.limit) || 5;
 
     const records = db.prepare(`
-      SELECT s.id, s.activity_id, s.signup_date, s.meal_type, s.employee_count, s.guest_count, s.created_at,
+      SELECT s.id, s.activity_id, s.signup_date, s.meal_type, s.employee_count, s.guest_count, s.reason, s.created_at,
         a.title, a.is_temporary
       FROM meal_signups_v4 s
       LEFT JOIN meal_activities_v4 a ON s.activity_id = a.id
