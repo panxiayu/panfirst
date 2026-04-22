@@ -178,6 +178,27 @@ CREATE TABLE IF NOT EXISTS six_s_records (
 - mobile-meal-list.html UI优化
 - 客餐申请优化：数字框重置、显示已报人数
 
+### 2026-04-22 完成
+
+**移动端报餐卡片滑动优化**
+- 删除 `.swipe-container.swiped-left .swipe-card` CSS规则（!important覆盖inline style）
+- 左滑无限制：移除 max(-80px) 限制，可无限左滑
+- 松手回弹到固定位置 -60px
+- 右滑恢复逻辑修复
+- 滑动时卡片变色（#E5E5E5）+ 变圆角（16px）+ 缩小90%
+- 滑动时 info-row 内容右移5px，info-count 左移15px，info-reason 左移5px
+- 绿色勾和红圈删除按钮透明度联动
+- 点击其他区域恢复卡片时绿圈也恢复
+- 日期卡片高度固定64px不变
+- 日历月卡片弹跳动画（6px），下滑提示箭头一起弹跳
+
+**日期卡片**
+- 已过报餐时间时状态文字右移 -100px
+
+**API连通性验证**
+- 确认 Joi schema 中 `dinner_employee` 字段已存在
+- 客餐权限逻辑正确
+
 ### 2026-04-20 完成
 
 **报餐系统**（9条需求全部完成）
