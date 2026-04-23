@@ -450,6 +450,10 @@
         }
 
         .signup-header.green {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .signup-header.blue {
             background: linear-gradient(135deg, #3b82f6, #1d4ed8);
         }
 
@@ -625,6 +629,18 @@
         .submit-btn.secondary {
             background: linear-gradient(135deg, var(--mobile-success), #059669);
             box-shadow: 0 4px 16px rgba(16,185,129,0.35);
+        }
+
+        /* 午餐提交按钮 - 黄色 */
+        .submit-btn.lunch {
+            background: linear-gradient(135deg, #F59E0B, #D97706);
+            box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+        }
+
+        /* 晚餐提交按钮 - 蓝色 */
+        .submit-btn.dinner {
+            background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
         }
 
         .submit-btn.danger {
@@ -2454,7 +2470,7 @@
                 ? `${act.lunch_signup_start} - ${act.lunch_signup_end}`
                 : `${act.dinner_signup_start} - ${act.dinner_signup_end}`;
             const icon = isLunch ? '🍱' : '🍚';
-            const headerClass = isLunch ? 'yellow' : 'green';
+            const headerClass = isLunch ? 'yellow' : 'blue';
 
             document.getElementById('content').innerHTML = `
                 <div class="card signup-card animate__animated animate__zoomIn">
@@ -2472,7 +2488,7 @@
                             ${currentActivity.canSignupDinner ? `<div class="type-btn ${!isLunch ? 'active dinner' : ''}" onclick="switchType('dinner')">晚餐</div>` : ''}
                         </div>
 
-                        <button class="submit-btn primary" onclick="submitEmployee()">
+                        <button class="submit-btn ${isLunch ? 'lunch' : 'dinner'}" onclick="submitEmployee()">
                             ${signupData.count > 0 ? '确认报餐' : '确认报名'}
                         </button>
                     </div>
