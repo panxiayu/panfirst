@@ -178,10 +178,11 @@ router.get('/:id', authMiddleware, (req, res) => {
     `).all(id);
 
     // 检查用户是否已投票
+    const currentUserId = req.user.type === 'employee' ? req.user.id : req.user.userId;
     const userVote = db.prepare(`
-      SELECT option_id FROM voting_records
+      SELECT option_ids FROM voting_records
       WHERE voting_id = ? AND user_id = ?
-    `).get(id, req.user.userId);
+    `).get(id, currentUserId);
 
     res.json({
       code: 0,
@@ -260,11 +261,12 @@ router.post('/:id/vote', authMiddleware, (req, res) => {
     }
 
     // 检查用户是否已投票
+    const currentUserId = req.user.type === 'employee' ? req.user.id : req.user.userId;
     if (voting.vote_limit === 'once') {
       const existingVote = db.prepare(`
         SELECT * FROM voting_records
         WHERE voting_id = ? AND user_id = ?
-      `).get(id, req.user.userId);
+      `).get(id, currentUserId);
 
       if (existingVote) {
         return res.status(400).json({
@@ -280,7 +282,7 @@ router.post('/:id/vote', authMiddleware, (req, res) => {
       const todayVote = db.prepare(`
         SELECT * FROM voting_records
         WHERE voting_id = ? AND user_id = ? AND date(created_at) = date('now')
-      `).get(id, req.user.userId);
+      `).get(id, currentUserId);
 
       if (todayVote) {
         return res.status(400).json({
@@ -305,7 +307,7 @@ router.post('/:id/vote', authMiddleware, (req, res) => {
       INSERT INTO voting_records (voting_id, user_id, option_ids, voted_at)
       VALUES (?, ?, ?, datetime('now'))
     `);
-    recordStmt.run(id, req.user.userId, optionIds.join(','));
+    recordStmt.run(id, currentUserId, optionIds.join(','));
 
     // 更新选项投票数
     const updateStmt = db.prepare(`
@@ -361,8 +363,13 @@ router.get('/:id/results', (req, res) => {
       ORDER BY votes DESC
     `).all(id);
 
+    // 统计投票人数（匿名用device_token，非匿名用user_id）
     const totalVotes = db.prepare(`
-      SELECT COUNT(DISTINCT device_token) as count FROM voting_records WHERE voting_id = ?
+      SELECT COUNT(*) as count FROM (
+        SELECT 1 FROM voting_records
+        WHERE voting_id = ?
+        GROUP BY COALESCE(NULLIF(device_token, ''), user_id)
+      )
     `).get(id).count;
 
     res.json({
@@ -412,13 +419,18 @@ router.get('/:id/voters', authMiddleware, adminMiddleware, (req, res) => {
 
     // 获取投票记录
     const records = db.prepare(`
-      SELECT vr.id, vr.employee_id, vr.employee_name, vr.option_ids, vr.voted_at,
-             vo.option_text
+      SELECT vr.id, vr.employee_id, vr.employee_name, vr.option_ids, vr.voted_at
       FROM voting_records vr
-      JOIN voting_options vo ON FIND_IN_SET(vo.id, vr.option_ids) > 0
       WHERE vr.voting_id = ?
       ORDER BY vr.voted_at DESC
     `).all(id);
+
+    // 获取所有选项
+    const options = db.prepare(`
+      SELECT id, option_text FROM voting_options WHERE voting_id = ?
+    `).all(id);
+
+    const optionMap = new Map(options.map(o => [o.id, o.option_text]));
 
     // 按人员分组
     const voterMap = new Map();
@@ -432,7 +444,13 @@ router.get('/:id/voters', authMiddleware, adminMiddleware, (req, res) => {
           options: []
         });
       }
-      voterMap.get(r.id).options.push(r.option_text);
+      // 解析 option_ids 并获取选项文本
+      const optionIds = r.option_ids ? r.option_ids.split(',').map(Number) : [];
+      optionIds.forEach(optId => {
+        if (optionMap.has(optId)) {
+          voterMap.get(r.id).options.push(optionMap.get(optId));
+        }
+      });
     });
 
     res.json({

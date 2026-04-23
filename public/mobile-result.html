@@ -301,7 +301,7 @@
             }
 
             document.getElementById('passScoreInfo').textContent = `及格分数：${examData.exam.pass_score}分`;
-            document.getElementById('correctCount').textContent = `${recordData.correctCount || 0}题`;
+            document.getElementById('correctCount').textContent = `${recordData.correct_count || 0}题`;
 
             if (isPassed || readonly) {
                 document.getElementById('retryBtn').style.display = 'none';

@@ -159,8 +159,8 @@ router.put('/paper/:id', authMiddleware, adminMiddleware, (req, res) => {
     `).run(
       title || exam.title,
       description !== undefined ? description : exam.description,
-      duration || exam.duration,
-      pass_score || exam.pass_score,
+      duration !== undefined ? duration : exam.duration,
+      pass_score !== undefined ? pass_score : exam.pass_score,
       is_active !== undefined ? (is_active ? 1 : 0) : exam.is_active,
       learning_task_id !== undefined ? learning_task_id : exam.learning_task_id,
       req.params.id
@@ -286,11 +286,11 @@ router.put('/question/:id', authMiddleware, adminMiddleware, (req, res) => {
       UPDATE questions SET type = ?, content = ?, options = ?, answer = ?, score = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      type || question.type,
-      content || question.content,
-      options ? JSON.stringify(options) : question.options,
+      type !== undefined ? type : question.type,
+      content !== undefined ? content : question.content,
+      options !== undefined ? JSON.stringify(options) : question.options,
       answer !== undefined ? answer : question.answer,
-      score || question.score,
+      score !== undefined ? score : question.score,
       req.params.id
     );
 
@@ -326,10 +326,13 @@ router.get('/records', authMiddleware, adminMiddleware, (req, res) => {
     const { exam_id, user_id } = req.query;
 
     let query = `
-      SELECT er.*, u.nickname, u.username, e.title as exam_title, e.duration, e.pass_score
+      SELECT er.*, e.title as exam_title, e.duration, e.pass_score,
+             u.nickname, u.username,
+             s.name as staff_name, s.employee_id as staff_employee_id, s.department as staff_department
       FROM exam_records er
-      JOIN users u ON er.user_id = u.id
       JOIN exams e ON er.exam_id = e.id
+      LEFT JOIN users u ON er.user_id = u.id AND er.staff_id IS NULL
+      LEFT JOIN staff s ON er.staff_id = s.id
     `;
     const params = [];
 
@@ -339,8 +342,8 @@ router.get('/records', authMiddleware, adminMiddleware, (req, res) => {
     }
 
     if (user_id) {
-      query += params.length ? ' AND er.user_id = ?' : ' WHERE er.user_id = ?';
-      params.push(user_id);
+      query += params.length ? ' AND (er.user_id = ? OR er.staff_id = ?)' : ' WHERE er.user_id = ? OR er.staff_id = ?';
+      params.push(user_id, user_id);
     }
 
     query += ' ORDER BY er.submitted_at DESC';
@@ -352,8 +355,11 @@ router.get('/records', authMiddleware, adminMiddleware, (req, res) => {
       exam_id: r.exam_id,
       exam_title: r.exam_title,
       user_id: r.user_id,
-      nickname: r.nickname || '未知',
+      staff_id: r.staff_id,
+      nickname: r.nickname || r.staff_name || '未知',
       openid: r.openid ? r.openid.substring(0, 15) + '...' : '',
+      employee_id: r.staff_employee_id || '',
+      department: r.staff_department || '',
       total_score: r.total_score,
       is_passed: r.is_passed,
       submitted_at: r.submitted_at,
@@ -372,10 +378,13 @@ router.get('/records', authMiddleware, adminMiddleware, (req, res) => {
 router.get('/record/:id', authMiddleware, adminMiddleware, (req, res) => {
   try {
     const record = db.prepare(`
-      SELECT er.*, u.nickname, u.username, e.title as exam_title, e.duration as exam_duration, e.pass_score
+      SELECT er.*, e.title as exam_title, e.duration as exam_duration, e.pass_score,
+             u.nickname, u.username,
+             s.name as staff_name, s.employee_id as staff_employee_id, s.department as staff_department
       FROM exam_records er
-      JOIN users u ON er.user_id = u.id
       JOIN exams e ON er.exam_id = e.id
+      LEFT JOIN users u ON er.user_id = u.id AND er.staff_id IS NULL
+      LEFT JOIN staff s ON er.staff_id = s.id
       WHERE er.id = ?
     `).get(req.params.id);
 

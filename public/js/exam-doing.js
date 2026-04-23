@@ -104,7 +104,7 @@ function startTimer(seconds) {
     if (seconds <= 0) {
       clearInterval(timerInterval);
       showToast('时间到，自动提交');
-      submitExam();
+      submitExam(true);
       return;
     }
 
@@ -183,9 +183,16 @@ function loadSavedAnswers() {
 }
 
 // 提交考试
-async function submitExam() {
-  if (confirm('确认提交试卷？提交后无法修改。')) {
-    clearInterval(timerInterval);
+async function submitExam(skipConfirm = false) {
+  if (!skipConfirm && confirm('确认提交试卷？提交后无法修改。')) {
+    await doSubmit();
+  } else if (skipConfirm) {
+    await doSubmit();
+  }
+}
+
+async function doSubmit() {
+  clearInterval(timerInterval);
 
     const responses = examData.questions.map(q => {
       const answerInputs = document.querySelectorAll(`.option input:checked[data-question-id="${q._id}"]`);
@@ -230,11 +237,15 @@ async function submitExam() {
 
 // 绑定选项点击事件
 document.addEventListener('click', (e) => {
+  if (!examData || !examData.questions) return;
+
   const optionEl = e.target.closest('.option');
   if (!optionEl) return;
-  
+
   const questionId = optionEl.dataset.questionId;
-  const qType = examData.questions.find(q => q._id === questionId).type;
+  const question = examData.questions.find(q => q._id === questionId);
+  if (!question) return;
+  const qType = question.type;
 
   if (qType === 'multiple_choice') {
     const checkbox = optionEl.querySelector('input[type="checkbox"]');

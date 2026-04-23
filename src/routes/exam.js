@@ -298,7 +298,9 @@ router.post('/submit', authMiddleware, examPermissionMiddleware, (req, res) => {
     }
 
     const examId = record.exam_id;
-    const questions = db.prepare('SELECT * FROM questions WHERE exam_id = ?').all(examId);
+    // 如果有 source_exam_id，从源考试获取题目（复用题库）
+    const actualExamId = record.source_exam_id || examId;
+    const questions = db.prepare('SELECT * FROM questions WHERE exam_id = ?').all(actualExamId);
 
     if (questions.length === 0) {
       return res.status(400).json({ code: -1, msg: '考试无题目', data: null });
@@ -378,22 +380,24 @@ function compareAnswer(type, correctAnswer, userAnswer) {
 router.get('/stats/user', authMiddleware, examPermissionMiddleware, (req, res) => {
   try {
     const userId = getUserId(req);
+    const isEmployee = req.user.type === 'employee';
+    const idField = isEmployee ? 'staff_id' : 'user_id';
 
     const stats = db.prepare(`
-      SELECT 
+      SELECT
         COUNT(*) as total_exams,
         SUM(CASE WHEN is_passed = 1 THEN 1 ELSE 0 END) as passed_exams,
         MAX(total_score) as max_score,
         AVG(total_score) as avg_score
       FROM exam_records
-      WHERE user_id = ? AND submitted_at IS NOT NULL
+      WHERE ${idField} = ? AND submitted_at IS NOT NULL
     `).get(userId);
 
     const recentRecords = db.prepare(`
       SELECT er.*, e.title as exam_title, e.duration, e.pass_score
       FROM exam_records er
       JOIN exams e ON er.exam_id = e.id
-      WHERE er.user_id = ? AND er.submitted_at IS NOT NULL
+      WHERE er.${idField} = ? AND er.submitted_at IS NOT NULL
       ORDER BY er.submitted_at DESC LIMIT 10
     `).all(userId);
 

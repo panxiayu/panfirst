@@ -264,15 +264,24 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--mobile-text-tertiary);
-            font-size: 18px;
             transition: all var(--mobile-transition-fast);
+            position: relative;
         }
-
+        .quick-arrow::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-top: 2px solid var(--mobile-text-tertiary);
+            border-right: 2px solid var(--mobile-text-tertiary);
+            transform: rotate(45deg);
+            margin-left: -2px;
+        }
         .quick-item:active .quick-arrow {
             background: var(--mobile-primary-light);
-            color: var(--mobile-primary);
             transform: translateX(4px);
+        }
+        .quick-item:active .quick-arrow::after {
+            border-color: var(--mobile-primary);
         }
             border-radius: var(--mobile-radius-md);
             display: flex;
@@ -361,15 +370,24 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--mobile-text-tertiary);
-            font-size: 18px;
             transition: all var(--mobile-transition-fast);
+            position: relative;
         }
-
+        .meal-card-arrow::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-top: 2px solid var(--mobile-text-tertiary);
+            border-right: 2px solid var(--mobile-text-tertiary);
+            transform: rotate(45deg);
+            margin-left: -2px;
+        }
         .meal-card:active .meal-card-arrow {
             background: var(--mobile-primary-light);
-            color: var(--mobile-primary);
             transform: translateX(4px);
+        }
+        .meal-card:active .meal-card-arrow::after {
+            border-color: var(--mobile-primary);
         }
 
         .meal-card-divider {
@@ -432,7 +450,7 @@
         }
 
         .signup-header.green {
-            background: linear-gradient(135deg, var(--mobile-success), #059669);
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
         }
 
         .signup-header-icon {
@@ -1700,7 +1718,7 @@
                             <div class="quick-title" style="font-size:17px;font-weight:700;color:var(--mobile-text-primary)">报餐记录</div>
                             <div class="quick-desc">查看我的报餐记录</div>
                         </div>
-                        <div class="quick-arrow">›</div>
+                        <div class="quick-arrow"></div>
                     </div>
 
                     <div class="meal-record-divider"></div>
@@ -1777,7 +1795,7 @@
                             <div class="meal-card-title">员工餐</div>
                             <div class="meal-card-desc">午餐 / 晚餐 快捷报名</div>
                         </div>
-                        <div class="meal-card-arrow">›</div>
+                        <div class="meal-card-arrow"></div>
                     </div>
 
                     <div class="meal-card-divider"></div>
@@ -1789,7 +1807,7 @@
                             <div class="meal-card-title">客餐</div>
                             <div class="meal-card-desc">招待来访客人</div>
                         </div>
-                        <div class="meal-card-arrow">›</div>
+                        <div class="meal-card-arrow"></div>
                     </div>
                     ` : ''}
                 </div>

@@ -6,8 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const { authMiddleware } = require('../middleware/auth');
 
-// 文件存储目录
-const UPLOAD_DIR = '/app/uploads/file-manager';
+// 文件存储目录 - 支持环境变量配置
+const UPLOAD_DIR = process.env.FILE_MANAGER_UPLOAD_DIR || path.join(__dirname, '../../uploads/file-manager');
 if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }

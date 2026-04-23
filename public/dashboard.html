@@ -355,8 +355,10 @@
         function loadUserInfo() {
             const user = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
             if (user.nickname) {
-                document.getElementById('userName').textContent = user.nickname;
-                document.getElementById('userAvatar').textContent = user.nickname.charAt(0);
+                const userNameEl = document.getElementById('userName');
+                const userAvatarEl = document.getElementById('userAvatar');
+                if (userNameEl) userNameEl.textContent = user.nickname;
+                if (userAvatarEl) userAvatarEl.textContent = user.nickname.charAt(0);
             }
         }
 

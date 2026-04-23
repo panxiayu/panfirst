@@ -110,9 +110,9 @@ router.get('/list', authMiddleware, (req, res) => {
       const endDate = new Date(activity.end_date + ' 23:59:59');
       const isExpired = now > deadline;
 
-      // 检查当前是否在报餐时间段内
+      // 检查当前是否在报餐时间段内（使用本地时间）
       const nowTime = now.toTimeString().slice(0, 5);
-      const nowDateStr = now.toISOString().slice(0, 10);
+      const nowDateStr = now.toLocaleDateString('zh-CN').replace(/\//g, '-');
 
       const isInLunchWindow = activity.lunch_enabled === 1 &&
         nowDateStr >= activity.start_date && nowDateStr <= activity.end_date &&
@@ -122,8 +122,8 @@ router.get('/list', authMiddleware, (req, res) => {
         nowDateStr >= activity.start_date && nowDateStr <= activity.end_date &&
         nowTime >= activity.dinner_signup_start && nowTime <= activity.dinner_signup_end;
 
-      // 获取用户今天的报名（包含原由）
-      const todayStr = now.toISOString().slice(0, 10);
+      // 获取用户今天的报名（包含原由）- 使用本地时间
+      const todayStr = now.toLocaleDateString('zh-CN').replace(/\//g, '-');
       const signups = db.prepare(`
         SELECT id, meal_type, employee_count, guest_count, reason FROM meal_signups_v4
         WHERE activity_id = ? AND user_id = ? AND signup_date = ?
@@ -354,7 +354,6 @@ router.post('/:id/signup', authMiddleware, (req, res) => {
       }
       const dinnerStart = parseInt(activity.dinner_signup_start.slice(0, 2)) * 60 + parseInt(activity.dinner_signup_start.slice(3, 5));
       const dinnerEnd = parseInt(activity.dinner_signup_end.slice(0, 2)) * 60 + parseInt(activity.dinner_signup_end.slice(3, 5));
-      console.log(`[晚餐检查] nowMinutes=${nowMinutes}, dinnerStart=${dinnerStart}, dinnerEnd=${dinnerEnd}, result=${nowMinutes < dinnerStart || nowMinutes > dinnerEnd}`);
       if (nowMinutes < dinnerStart || nowMinutes > dinnerEnd) {
         return res.status(400).json({ code: -1, msg: `晚餐报餐时间 ${activity.dinner_signup_start} - ${activity.dinner_signup_end}`, data: null });
       }
@@ -541,12 +540,15 @@ router.get('/:id/statistics', authMiddleware, adminMiddleware, (req, res) => {
       };
     });
 
-    // 生成日期范围内的所有日期
+    // 生成日期范围内的所有日期（使用本地时间）
     const dates = [];
     const start = new Date(activity.start_date);
     const end = new Date(activity.end_date);
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push(d.toISOString().slice(0, 10));
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      dates.push(`${year}-${month}-${day}`);
     }
 
     // 总计（四个字段完全独立）

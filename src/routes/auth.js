@@ -177,7 +177,8 @@ router.post('/login', (req, res) => {
  */
 router.get('/me', authMiddleware, (req, res) => {
   try {
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.userId);
+    const currentUserId = req.user.type === 'employee' ? req.user.id : req.user.userId;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(currentUserId);
 
     if (!user) {
       return res.status(404).json({
@@ -222,7 +223,8 @@ router.post('/logout', authMiddleware, (req, res) => {
  */
 router.post('/refresh', authMiddleware, (req, res) => {
   try {
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.userId);
+    const currentUserId = req.user.type === 'employee' ? req.user.id : req.user.userId;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(currentUserId);
 
     if (!user) {
       return res.status(404).json({
@@ -232,11 +234,10 @@ router.post('/refresh', authMiddleware, (req, res) => {
       });
     }
 
-    const newToken = generateToken({
-      userId: user.id,
-      username: user.username,
-      role: user.role
-    });
+    // 根据用户类型生成对应的 token
+    const newToken = req.user.type === 'employee'
+      ? generateToken({ id: user.id, type: 'employee', employee_id: user.employee_id, name: user.name })
+      : generateToken({ userId: user.id, username: user.username, role: user.role });
 
     res.json({
       code: 0,

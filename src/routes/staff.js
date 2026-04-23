@@ -112,7 +112,7 @@ initializeSyncLog();
 // GET /api/staff/column-config?key=staff_columns
 router.get('/column-config', authMiddleware, (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.type === 'employee' ? req.user.id : req.user.userId;
     const configKey = req.query.key || 'staff_columns';
 
     const row = db.prepare('SELECT config_data FROM user_column_configs WHERE user_id = ? AND config_key = ?').get(userId, configKey);
@@ -171,7 +171,7 @@ router.post('/sync-time', (req, res) => {
 // POST /api/staff/column-config
 router.post('/column-config', authMiddleware, (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.type === 'employee' ? req.user.id : req.user.userId;
     const { key, data } = req.body;
 
     if (!key || data === undefined) {

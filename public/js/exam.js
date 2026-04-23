@@ -810,6 +810,16 @@ function toggleTask(id) {
     updateSelectedTaskCount();
 }
 
+function updateSelectedTaskCount() {
+    // 更新所有任务卡片的复选框状态
+    document.querySelectorAll('.task-card .task-checkbox').forEach(cb => {
+        const id = parseInt(cb.onclick.toString().match(/toggleTask\((\d+)\)/)?.[1]);
+        if (id) {
+            cb.checked = selectedTasks.has(id);
+        }
+    });
+}
+
 function goToTaskDetail(id, event) {
     if (event.target.classList.contains('task-checkbox')) return;
     window.location.href = `learning-materials-detail.html?id=${id}`;
@@ -1098,7 +1108,7 @@ async function parseFileAPI(file) {
         const formData = new FormData();
         formData.append('file', file);
 
-        fetch(`${API_URL}/parse-file`, {
+        fetch(`${API_URL}/import/parse-file`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
@@ -1110,7 +1120,7 @@ async function parseFileAPI(file) {
 }
 
 async function parseTextAPI(text) {
-    const res = await fetch(`${API_URL}/parse-text`, {
+    const res = await fetch(`${API_URL}/import/parse-text`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ text })
@@ -1297,7 +1307,7 @@ async function importQuestionsAPI(data, paperId) {
         formData.append('file', data);
         formData.append('paperId', paperId);
 
-        const res = await fetch(`${API_URL}/upload`, {
+        const res = await fetch(`${API_URL}/import/upload`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
@@ -1308,7 +1318,7 @@ async function importQuestionsAPI(data, paperId) {
     } else {
         // 文本上传
         console.log('Sending text import request:', { textLength: data.length, paperId });
-        const res = await fetch(`${API_URL}/upload`, {
+        const res = await fetch(`${API_URL}/import/upload`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: data, paperId })

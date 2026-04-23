@@ -49,7 +49,7 @@ async function loadExamList() {
           <span class="duration">⏱️ ${exam.duration} 分钟</span>
         </div>
         <div class="meta" style="margin-top: 5px;">
-          <span>总分: ${(exam.question_count || 0) * 10} 分</span>
+          <span>总分: ${exam.total_score || 0} 分</span>
         </div>
       </div>
     `).join('');

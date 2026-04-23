@@ -49,21 +49,19 @@ try {
 }
 
 // 检查用户是否有考试权限（只使用粒化权限）
-function checkExamPermission(userId) {
+function checkExamPermission(userId, userType) {
   // 管理员肯定有权限
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-  if (user && (user.role === 'admin' || user.can_manage_exam === 1)) return true;
+  if (userType === 'admin') return true;
 
-  // 检查粒化考试权限表
+  // 员工检查粒化考试权限表
   const examPerm = db.prepare('SELECT COUNT(*) as cnt FROM exam_permissions WHERE staff_id = ? AND can_take = 1').get(userId);
   return examPerm && examPerm.cnt > 0;
 }
 
 // 检查用户是否有指定考试的学习任务权限（只使用粒化权限）
-function checkLearningTaskPermissionByExam(userId, examId) {
+function checkLearningTaskPermissionByExam(userId, userType, examId) {
   // 管理员肯定有权限
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-  if (user && (user.role === 'admin' || user.can_manage_exam === 1)) return true;
+  if (userType === 'admin') return true;
 
   // 检查粒化考试权限表
   if (examId) {
@@ -557,8 +555,8 @@ router.put('/:id', authMiddleware, (req, res) => {
     `);
 
     stmt.run(
-      title || task.title,
-      file_url || task.file_url,
+      title !== undefined ? title : task.title,
+      file_url !== undefined ? file_url : task.file_url,
       start_time ? convertLocalToUTC(start_time) : task.start_time,
       end_time ? convertLocalToUTC(end_time) : task.end_time,
       id

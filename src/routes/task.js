@@ -27,7 +27,7 @@ router.get('/', authMiddleware, (req, res) => {
     // 如果不是管理员，只显示分配给自己的任务
     if (req.user.role !== 'admin') {
       query += ' AND assigned_to = ?';
-      params.push(req.user.userId);
+      params.push(req.user.id);
     }
 
     query += ' ORDER BY created_at DESC';
@@ -66,7 +66,7 @@ router.get('/:id', authMiddleware, (req, res) => {
     }
 
     // 检查权限
-    if (req.user.role !== 'admin' && task.assigned_to !== req.user.userId) {
+    if (req.user.role !== 'admin' && task.assigned_to !== req.user.id) {
       return res.status(403).json({
         code: -1,
         msg: '无权访问此任务',
@@ -124,7 +124,7 @@ router.post('/', authMiddleware, adminMiddleware, (req, res) => {
       description || '',
       type,
       assigned_to,
-      req.user.userId,
+      req.user.id,
       due_date || null,
       priority,
       status
@@ -139,7 +139,7 @@ router.post('/', authMiddleware, adminMiddleware, (req, res) => {
         description,
         type,
         assigned_to,
-        assigned_by: req.user.userId,
+        assigned_by: req.user.id,
         due_date,
         priority,
         status
@@ -218,7 +218,7 @@ router.post('/:id/complete', authMiddleware, (req, res) => {
     }
 
     // 检查权限
-    if (req.user.role !== 'admin' && task.assigned_to !== req.user.userId) {
+    if (req.user.role !== 'admin' && task.assigned_to !== req.user.id) {
       return res.status(403).json({
         code: -1,
         msg: '无权完成此任务',

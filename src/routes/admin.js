@@ -235,7 +235,7 @@ router.put('/:id/update', authMiddleware, (req, res) => {
  * DELETE /api/admin/:id
  * 删除管理员
  */
-router.delete('/:id', authMiddleware, (req, res) => {
+router.delete('/:id', authMiddleware, adminMiddleware, (req, res) => {
   try {
     const adminId = parseInt(req.params.id);
     

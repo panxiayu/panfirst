@@ -140,10 +140,12 @@ router.post('/exams/batch', authMiddleware, adminMiddleware, (req, res) => {
 // GET /api/permissions/meals - 获取所有报餐活动及其权限状态
 router.get('/meals', authMiddleware, (req, res) => {
     try {
+        // signup_count: 真实报名人数（排除权限标记记录）
+        // perm_count: 有权限人数（用假日期 '2099-12-31' 标记的权限记录）
         const activities = db.prepare(`
             SELECT ma.*,
-                (SELECT COUNT(DISTINCT user_id) FROM meal_signups_v4 msv WHERE msv.activity_id = ma.id) as signup_count,
-                (SELECT COUNT(DISTINCT user_id) FROM meal_signups_v4 msv WHERE msv.activity_id = ma.id) as perm_count
+                (SELECT COUNT(DISTINCT user_id) FROM meal_signups_v4 msv WHERE msv.activity_id = ma.id AND msv.signup_date != '2099-12-31') as signup_count,
+                (SELECT COUNT(DISTINCT user_id) FROM meal_signups_v4 msv WHERE msv.activity_id = ma.id AND msv.signup_date = '2099-12-31') as perm_count
             FROM meal_activities_v4 ma
             ORDER BY ma.created_at DESC
         `).all();
@@ -165,42 +167,49 @@ router.get('/meals/types', authMiddleware, (req, res) => {
     }
 });
 
-// GET /api/permissions/meals/:id/staff - 获取某报餐活动的签到员工列表
+// GET /api/permissions/meals/:id/staff - 获取某报餐活动的权限员工列表
 router.get('/meals/:id/staff', authMiddleware, (req, res) => {
     try {
         const { id } = req.params;
-        // meal_signups_v4 实际列: id, activity_id, user_id, signup_date, meal_type, employee_count, guest_count
+        // 权限记录用假日期 '2099-12-31' 标记
+        // 报名记录用真实日期
         const staff = db.prepare(`
             SELECT s.id, s.employee_id, s.name, s.department, s.guest_meal_permission,
-                (SELECT SUM(msv2.employee_count) FROM meal_signups_v4 msv2 WHERE msv2.user_id = s.id AND msv2.activity_id = ? AND msv2.meal_type = 'lunch') as lunch_count,
-                (SELECT SUM(msv2.employee_count) FROM meal_signups_v4 msv2 WHERE msv2.user_id = s.id AND msv2.activity_id = ? AND msv2.meal_type = 'dinner') as dinner_count,
-                (SELECT SUM(msv2.guest_count) FROM meal_signups_v4 msv2 WHERE msv2.user_id = s.id AND msv2.activity_id = ? AND msv2.meal_type = 'lunch') as guest_lunch_count,
-                (SELECT SUM(msv2.guest_count) FROM meal_signups_v4 msv2 WHERE msv2.user_id = s.id AND msv2.activity_id = ? AND msv2.meal_type = 'dinner') as guest_dinner_count
+                (SELECT COUNT(*) FROM meal_signups_v4 msv2 WHERE msv2.user_id = s.id AND msv2.activity_id = ? AND msv2.meal_type = 'lunch' AND msv2.signup_date = '2099-12-31' AND msv2.employee_count > 0) as has_lunch_perm,
+                (SELECT COUNT(*) FROM meal_signups_v4 msv2 WHERE msv2.user_id = s.id AND msv2.activity_id = ? AND msv2.meal_type = 'dinner' AND msv2.signup_date = '2099-12-31' AND msv2.employee_count > 0) as has_dinner_perm,
+                (SELECT COUNT(*) FROM meal_signups_v4 msv2 WHERE msv2.user_id = s.id AND msv2.activity_id = ? AND msv2.meal_type = 'lunch' AND msv2.signup_date = '2099-12-31' AND msv2.guest_count > 0) as has_guest_lunch_perm,
+                (SELECT COUNT(*) FROM meal_signups_v4 msv2 WHERE msv2.user_id = s.id AND msv2.activity_id = ? AND msv2.meal_type = 'dinner' AND msv2.signup_date = '2099-12-31' AND msv2.guest_count > 0) as has_guest_dinner_perm
             FROM staff s
             WHERE s.status = 'active'
             ORDER BY s.employee_id
         `).all(id, id, id, id);
 
-        // 兼容旧字段名
+        // has_perm: 只要有任一权限就算有权限
         const result = staff.map(s => ({
-            ...s,
-            has_perm: (s.lunch_count > 0 || s.dinner_count > 0 || s.guest_lunch_count > 0 || s.guest_dinner_count > 0) ? 1 : 0,
-            employee_meal_lunch: s.lunch_count || 0,
-            employee_meal_dinner: s.dinner_count || 0,
-            guest_meal_lunch: s.guest_lunch_count || 0,
-            guest_meal_dinner: s.guest_dinner_count || 0
+            id: s.id,
+            employee_id: s.employee_id,
+            name: s.name,
+            department: s.department,
+            guest_meal_permission: s.guest_meal_permission,
+            has_perm: (s.has_lunch_perm > 0 || s.has_dinner_perm > 0 || s.has_guest_lunch_perm > 0 || s.has_guest_dinner_perm > 0) ? 1 : 0,
+            // 兼容旧字段名
+            employee_meal_lunch: s.has_lunch_perm,
+            employee_meal_dinner: s.has_dinner_perm,
+            guest_meal_lunch: s.has_guest_lunch_perm,
+            guest_meal_dinner: s.has_guest_dinner_perm
         }));
 
         res.json({ code: 0, data: result });
     } catch (err) {
-        console.error('获取报餐签到员工失败:', err);
+        console.error('获取报餐权限员工失败:', err);
         res.status(500).json({ code: -1, msg: '服务器错误' });
     }
 });
 
-// PUT /api/permissions/meals/:id/staff - 批量更新报餐签到
+// PUT /api/permissions/meals/:id/staff - 批量更新报餐权限
 // staff_ids = 员工餐权限（默认全员，勾选即开通）
 // guest_staff_ids = 客餐权限（需要单独勾选）
+// 注意：权限记录用假日期 '2099-12-31' 标记，不影响真实报名数据
 router.put('/meals/:id/staff', authMiddleware, adminMiddleware, (req, res) => {
     try {
         const { id } = req.params;
@@ -209,34 +218,37 @@ router.put('/meals/:id/staff', authMiddleware, adminMiddleware, (req, res) => {
         const employeeIds = Array.isArray(staff_ids) ? staff_ids : [];
         const guestIds = Array.isArray(guest_staff_ids) ? guest_staff_ids : [];
 
-        // 清空该活动的所有签到记录
-        db.prepare('DELETE FROM meal_signups_v4 WHERE activity_id = ?').run(id);
+        // 用假日期 '2099-12-31' 标记权限记录，不删除真实报名数据
+        const permDate = '2099-12-31';
 
-        // 插入员工餐签到记录（勾选了就有权限，默认全员）
+        // 先删除该活动的旧权限记录（用假日期标记的）
+        db.prepare(`DELETE FROM meal_signups_v4 WHERE activity_id = ? AND signup_date = ?`).run(id, permDate);
+
+        // 插入员工餐权限记录（勾选了就有权限，默认全员）
         const insertEmployeeLunch = db.prepare(`
             INSERT INTO meal_signups_v4 (activity_id, user_id, signup_date, meal_type, employee_count, guest_count)
-            VALUES (?, ?, date('now'), 'lunch', 1, 0)
+            VALUES (?, ?, ?, 'lunch', 1, 0)
         `);
         const insertEmployeeDinner = db.prepare(`
             INSERT INTO meal_signups_v4 (activity_id, user_id, signup_date, meal_type, employee_count, guest_count)
-            VALUES (?, ?, date('now'), 'dinner', 1, 0)
+            VALUES (?, ?, ?, 'dinner', 1, 0)
         `);
 
-        // 插入客餐签到记录（需要单独勾选）
+        // 插入客餐权限记录（需要单独勾选）
         const insertGuestLunch = db.prepare(`
             INSERT INTO meal_signups_v4 (activity_id, user_id, signup_date, meal_type, employee_count, guest_count)
-            VALUES (?, ?, date('now'), 'lunch', 0, 1)
+            VALUES (?, ?, ?, 'lunch', 0, 1)
         `);
         const insertGuestDinner = db.prepare(`
             INSERT INTO meal_signups_v4 (activity_id, user_id, signup_date, meal_type, employee_count, guest_count)
-            VALUES (?, ?, date('now'), 'dinner', 0, 1)
+            VALUES (?, ?, ?, 'dinner', 0, 1)
         `);
 
         // 插入员工餐权限
         for (const staffId of employeeIds) {
             try {
-                insertEmployeeLunch.run(id, staffId);
-                insertEmployeeDinner.run(id, staffId);
+                insertEmployeeLunch.run(id, staffId, permDate);
+                insertEmployeeDinner.run(id, staffId, permDate);
             } catch (e) {}
         }
 
@@ -245,15 +257,15 @@ router.put('/meals/:id/staff', authMiddleware, adminMiddleware, (req, res) => {
             try {
                 // 检查是否已在员工餐中
                 if (!employeeIds.includes(staffId)) {
-                    insertGuestLunch.run(id, staffId);
-                    insertGuestDinner.run(id, staffId);
+                    insertGuestLunch.run(id, staffId, permDate);
+                    insertGuestDinner.run(id, staffId, permDate);
                 }
             } catch (e) {}
         }
 
         res.json({ code: 0, msg: '更新成功', data: { employee_count: employeeIds.length, guest_count: guestIds.length } });
     } catch (err) {
-        console.error('更新报餐签到失败:', err);
+        console.error('更新报餐权限失败:', err);
         res.status(500).json({ code: -1, msg: '服务器错误' });
     }
 });
