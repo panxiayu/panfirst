@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'admin/login.html';
         return;
     }
+    // 权限检查
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    if (!currentUser.can_manage_file) { alert('无权限访问文件管理'); window.location.href = 'dashboard.html'; return; }
     loadFiles();
 });
 

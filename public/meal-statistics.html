@@ -4,23 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>报餐统计 - 兴利汽车模具</title>
-    <link rel="stylesheet" href="css/linear.css">
     <link rel="stylesheet" href="css/theme.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, var(--bg-page) 0%, var(--bg-surface) 50%, var(--bg-page) 100%); color: var(--text-primary); min-height: 100vh; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, var(--bg) 0%, var(--bg) 50%, var(--bg) 100%); color: var(--text); min-height: 100vh; }
         .container { width: 100% !important; max-width: 1600px !important; margin: 0 auto; padding: 20px 24px; box-sizing: border-box; overflow-x: auto; }
 
         .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; width: 100%; box-sizing: border-box; }
         .toolbar-left { display: flex; align-items: center; gap: 12px; }
-        .page-title { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-primary); }
+        .page-title { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
 
         .btn { padding: 8px 14px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; transition: all 0.2s; }
-        .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary { background: var(--white); color: var(--text); border: 1px solid var(--border); }
 
         .stats-grid { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
-        .stat-card { flex: 1; min-width: 140px; background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,0.6); text-align: center; }
-        .stat-value { font-size: 32px; font-weight: 700; color: var(--text-primary); }
+        .stat-card { flex: 1; min-width: 140px; background: var(--white); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,0.6); text-align: center; }
+        .stat-value { font-size: 32px; font-weight: 700; color: var(--text); }
         .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
 
         .activity-info { margin-bottom: 20px; }
@@ -32,7 +31,7 @@
         .meal-type-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-weight: 600; font-size: 15px; }
         .meal-type-times { font-size: 13px; color: var(--text-secondary); font-weight: normal; }
 
-        .person-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 8px; box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,0.6); display: flex; justify-content: space-between; align-items: center; }
+        .person-card { background: var(--white); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 8px; box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,0.6); display: flex; justify-content: space-between; align-items: center; }
         .person-name { font-weight: 600; font-size: 14px; }
         .person-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
         .person-meals { display: flex; gap: 16px; font-size: 13px; }

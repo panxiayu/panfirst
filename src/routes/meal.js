@@ -111,19 +111,31 @@ router.get('/list', authMiddleware, (req, res) => {
       const isExpired = now > deadline;
 
       // 检查当前是否在报餐时间段内（使用本地时间）
-      const nowTime = now.toTimeString().slice(0, 5);
-      const nowDateStr = now.toLocaleDateString('zh-CN').replace(/\//g, '-');
+      // 统一使用 YYYY-MM-DD 格式
+      const nowDateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+
+      // 将时间转换为分钟数进行比较（如 "08:30" -> 510）
+      const timeToMinutes = (timeStr) => {
+        const [h, m] = timeStr.split(':').map(Number);
+        return h * 60 + m;
+      };
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const lunchStart = timeToMinutes(activity.lunch_signup_start);
+      const lunchEnd = timeToMinutes(activity.lunch_signup_end);
+      const dinnerStart = timeToMinutes(activity.dinner_signup_start);
+      const dinnerEnd = timeToMinutes(activity.dinner_signup_end);
 
       const isInLunchWindow = activity.lunch_enabled === 1 &&
         nowDateStr >= activity.start_date && nowDateStr <= activity.end_date &&
-        nowTime >= activity.lunch_signup_start && nowTime <= activity.lunch_signup_end;
+        nowMinutes >= lunchStart && nowMinutes <= lunchEnd;
 
       const isInDinnerWindow = activity.dinner_enabled === 1 &&
         nowDateStr >= activity.start_date && nowDateStr <= activity.end_date &&
-        nowTime >= activity.dinner_signup_start && nowTime <= activity.dinner_signup_end;
+        nowMinutes >= dinnerStart && nowMinutes <= dinnerEnd;
 
       // 获取用户今天的报名（包含原由）- 使用本地时间
-      const todayStr = now.toLocaleDateString('zh-CN').replace(/\//g, '-');
+      // 统一使用 YYYY-MM-DD 格式
+      const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
       const signups = db.prepare(`
         SELECT id, meal_type, employee_count, guest_count, reason FROM meal_signups_v4
         WHERE activity_id = ? AND user_id = ? AND signup_date = ?
@@ -372,9 +384,11 @@ router.post('/:id/signup', authMiddleware, (req, res) => {
       }
     }
 
-    // 获取已存在的报名数据用于合并
-    const existingLunch = db.prepare(`SELECT id, employee_count, guest_count FROM meal_signups_v4 WHERE activity_id = ? AND user_id = ? AND signup_date = ? AND meal_type = 'lunch'`).get(id, userId, date);
-    const existingDinner = db.prepare(`SELECT id, employee_count, guest_count FROM meal_signups_v4 WHERE activity_id = ? AND user_id = ? AND signup_date = ? AND meal_type = 'dinner'`).get(id, userId, date);
+    // 获取已存在的报名数据用于合并（员工餐和客餐分开查询）
+    const existingEmployeeLunch = db.prepare(`SELECT id, employee_count, guest_count FROM meal_signups_v4 WHERE activity_id = ? AND user_id = ? AND signup_date = ? AND meal_type = 'lunch' AND employee_count > 0`).get(id, userId, date);
+    const existingEmployeeDinner = db.prepare(`SELECT id, employee_count, guest_count FROM meal_signups_v4 WHERE activity_id = ? AND user_id = ? AND signup_date = ? AND meal_type = 'dinner' AND employee_count > 0`).get(id, userId, date);
+    const existingGuestLunch = db.prepare(`SELECT id, employee_count, guest_count FROM meal_signups_v4 WHERE activity_id = ? AND user_id = ? AND signup_date = ? AND meal_type = 'lunch' AND guest_count > 0`).get(id, userId, date);
+    const existingGuestDinner = db.prepare(`SELECT id, employee_count, guest_count FROM meal_signups_v4 WHERE activity_id = ? AND user_id = ? AND signup_date = ? AND meal_type = 'dinner' AND guest_count > 0`).get(id, userId, date);
 
     // 检查请求中是否包含这些字段（而不是依赖 Joi 默认值）
     const hasLunchEmployee = req.body.hasOwnProperty('lunch_employee');
@@ -386,8 +400,8 @@ router.post('/:id/signup', authMiddleware, (req, res) => {
     const guestReason = req.body.guest_reason || '';
 
     // 员工餐：独立记录，只更新自己的count，不影响客餐
-    const finalLunchEmployee = hasLunchEmployee ? lunch_employee : (existingLunch?.employee_count || 0);
-    const finalDinnerEmployee = hasDinnerEmployee ? dinner_employee : (existingDinner?.employee_count || 0);
+    const finalLunchEmployee = hasLunchEmployee ? lunch_employee : (existingEmployeeLunch?.employee_count || 0);
+    const finalDinnerEmployee = hasDinnerEmployee ? dinner_employee : (existingEmployeeDinner?.employee_count || 0);
 
     // 事务处理：四种数据完全独立
     const transaction = db.transaction(() => {
@@ -396,9 +410,9 @@ router.post('/:id/signup', authMiddleware, (req, res) => {
         db.prepare(`
           INSERT OR REPLACE INTO meal_signups_v4 (id, activity_id, user_id, signup_date, meal_type, employee_count, guest_count, reason)
           VALUES (?, ?, ?, ?, 'lunch', ?, 0, NULL)
-        `).run(existingLunch?.id || null, id, userId, date, finalLunchEmployee);
-      } else if (existingLunch && existingLunch.employee_count > 0) {
-        db.prepare(`DELETE FROM meal_signups_v4 WHERE id = ?`).run(existingLunch.id);
+        `).run(existingEmployeeLunch?.id || null, id, userId, date, finalLunchEmployee);
+      } else if (existingEmployeeLunch) {
+        db.prepare(`DELETE FROM meal_signups_v4 WHERE id = ?`).run(existingEmployeeLunch.id);
       }
 
       // 员工晚餐：独立记录，只写employee_count，guest_count=0
@@ -406,25 +420,25 @@ router.post('/:id/signup', authMiddleware, (req, res) => {
         db.prepare(`
           INSERT OR REPLACE INTO meal_signups_v4 (id, activity_id, user_id, signup_date, meal_type, employee_count, guest_count, reason)
           VALUES (?, ?, ?, ?, 'dinner', ?, 0, NULL)
-        `).run(existingDinner?.id || null, id, userId, date, finalDinnerEmployee);
-      } else if (existingDinner && existingDinner.employee_count > 0) {
-        db.prepare(`DELETE FROM meal_signups_v4 WHERE id = ?`).run(existingDinner.id);
+        `).run(existingEmployeeDinner?.id || null, id, userId, date, finalDinnerEmployee);
+      } else if (existingEmployeeDinner) {
+        db.prepare(`DELETE FROM meal_signups_v4 WHERE id = ?`).run(existingEmployeeDinner.id);
       }
 
       // 客餐午餐：独立记录，employee_count=0
       if (lunch_guest > 0 && guestReason) {
         db.prepare(`
-          INSERT INTO meal_signups_v4 (activity_id, user_id, signup_date, meal_type, employee_count, guest_count, reason)
-          VALUES (?, ?, ?, 'lunch', 0, ?, ?)
-        `).run(id, userId, date, lunch_guest, guestReason);
+          INSERT OR REPLACE INTO meal_signups_v4 (id, activity_id, user_id, signup_date, meal_type, employee_count, guest_count, reason)
+          VALUES (?, ?, ?, ?, 'lunch', 0, ?, ?)
+        `).run(existingGuestLunch?.id || null, id, userId, date, lunch_guest, guestReason);
       }
 
       // 客餐晚餐：独立记录，employee_count=0
       if (dinner_guest > 0 && guestReason) {
         db.prepare(`
-          INSERT INTO meal_signups_v4 (activity_id, user_id, signup_date, meal_type, employee_count, guest_count, reason)
-          VALUES (?, ?, ?, 'dinner', 0, ?, ?)
-        `).run(id, userId, date, dinner_guest, guestReason);
+          INSERT OR REPLACE INTO meal_signups_v4 (id, activity_id, user_id, signup_date, meal_type, employee_count, guest_count, reason)
+          VALUES (?, ?, ?, ?, 'dinner', 0, ?, ?)
+        `).run(existingGuestDinner?.id || null, id, userId, date, dinner_guest, guestReason);
       }
     });
 

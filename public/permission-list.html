@@ -2,221 +2,300 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>权限管理 - 兴利汽车模具</title>
-    <link rel="stylesheet" href="css/linear.css">
-    <link rel="stylesheet" href="css/theme.css">
     <style>
-        .perm-tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--bg-hover); padding: 4px; border-radius: var(--radius); flex-wrap: wrap; }
-        .perm-tab { padding: 10px 16px; border: none; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s; white-space: nowrap; }
-        .perm-tab:hover { color: var(--text-primary); }
-        .perm-tab.active { background: var(--bg-card); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .perm-section { display: none; }
-        .perm-section.active { display: block; }
-        .admin-list { margin-top: 16px; }
-        .admin-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; }
-        .admin-item:hover { border-color: var(--border-dark); }
-        .admin-info { display: flex; align-items: center; gap: 12px; }
-        .admin-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
-        .admin-name { font-weight: 500; font-size: 14px; }
-        .slide-btn { position: relative; width: 72px; height: 30px; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; overflow: hidden; flex-shrink: 0; }
-        .slide-btn.off { background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%); }
-        .slide-btn.on { background: linear-gradient(135deg, #23a559 0%, #34d058 100%); }
-        .slide-btn .slide-thumb { position: absolute; width: 26px; height: 26px; top: 2px; left: 2px; background: white; border-radius: 50%; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
-        .slide-btn.on .slide-thumb { left: calc(100% - 28px); }
+        * { -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #F0F7FF;
+            --card: #ffffff;
+            --border: #D6E9FF;
+            --primary: #4A90E2;
+            --secondary: #65B3FF;
+            --accent: #22C58D;
+            --text: #1D2B5A;
+            --text-soft: #5B72A9;
+            --radius: 22px;
+            --transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
 
-        /* 资源列表样式 */
-        .resource-list { margin-top: 16px; }
-        .resource-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
-        .resource-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; }
-        .resource-header:hover { background: var(--bg-hover); }
-        .resource-title { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-        .resource-meta { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
-        .resource-badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-        .badge-customer { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-        .badge-employee { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
-        .resource-arrow { font-size: 18px; color: var(--text-secondary); transition: transform 0.2s; }
+        /* 序列入场动画 */
+        .fade-item { opacity: 0; transform: translateY(30px); transition: var(--transition); }
+        .fade-in { opacity: 1 !important; transform: translateY(0) !important; }
+
+        /* 页面头部 */
+        .page-header { background: var(--card); border-bottom: 1px solid var(--border); padding: 18px 0; margin-bottom: 28px; }
+        .page-header .wrap { display: flex; justify-content: space-between; align-items: center; }
+        .page-logo { font-size: 18px; font-weight: 700; color: var(--text); }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .page-title { font-size: 18px; font-weight: 700; color: var(--text); }
+
+        /* 按钮 */
+        .btn { padding: 10px 20px; border: none; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 600; transition: var(--transition); }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; }
+        .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(74, 144, 226, 0.15); }
+        .btn-sm { padding: 8px 14px; font-size: 12px; border-radius: 10px; }
+
+        /* 标签页 */
+        .perm-tabs { display: flex; gap: 6px; margin-bottom: 24px; background: var(--card); padding: 6px; border-radius: var(--radius); border: 1px solid var(--border); flex-wrap: wrap; position: relative; }
+        .perm-tab { padding: 12px 20px; border: none; background: transparent; color: var(--text-soft); font-size: 14px; font-weight: 500; cursor: pointer; border-radius: 16px; transition: color 0.3s ease; white-space: nowrap; position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; }
+        .perm-tab:hover { color: var(--text); }
+        .perm-tab.active { color: #fff; font-weight: 600; }
+        .perm-tab-indicator { position: absolute; top: 6px; bottom: 6px; left: 6px; min-width: 60px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 16px; transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1; box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3); }
+        .perm-tabs-container { position: relative; overflow: hidden; min-height: calc(100vh - 200px); }
+        .perm-section { display: block; opacity: 0; transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease; pointer-events: none; position: absolute; top: 0; left: 0; width: 100%; }
+        .perm-section.active { opacity: 1; transform: translateX(0); pointer-events: auto; }
+
+        /* 管理员卡片 */
+        .admin-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; padding-top: 5px; }
+        .admin-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; transition: var(--transition); }
+        .admin-item:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 12px 28px rgba(74, 144, 226, 0.1); }
+        .admin-item-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+        .admin-info { display: flex; align-items: center; gap: 14px; }
+        .admin-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2); }
+        .admin-name { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+        .admin-meta { font-size: 12px; color: var(--text-soft); }
+        .admin-actions { display: flex; gap: 8px; }
+        .admin-systems { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 14px; border-top: 1px solid var(--border); }
+        .sys-tag { padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: 500; }
+        .sys-tag.on { background: rgba(34, 197, 94, 0.12); color: #16a34a; }
+        .sys-tag.off { background: rgba(107, 114, 128, 0.1); color: #9ca3af; }
+
+        /* 资源列表 */
+        .resource-list { display: grid; gap: 16px; }
+        .resource-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: var(--transition); }
+        .resource-item:hover { border-color: var(--primary); box-shadow: 0 8px 20px rgba(74, 144, 226, 0.08); }
+        .resource-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; cursor: pointer; }
+        .resource-header:hover { background: rgba(74, 144, 226, 0.02); }
+        .resource-title { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+        .resource-meta { font-size: 12px; color: var(--text-soft); margin-top: 4px; }
+        .resource-right { display: flex; align-items: center; gap: 12px; }
+        .perm-count { font-size: 12px; color: var(--text-soft); }
+        .resource-arrow { font-size: 14px; color: var(--text-soft); transition: transform 0.25s; }
         .resource-item.open .resource-arrow { transform: rotate(90deg); }
-        .resource-body { display: none; padding: 16px; border-top: 1px solid var(--border); }
+        .resource-body { display: none; padding: 20px; border-top: 1px solid var(--border); background: rgba(74, 144, 226, 0.01); }
         .resource-item.open .resource-body { display: block; }
-        .perm-count { font-size: 12px; color: var(--text-secondary); }
 
-        /* 员工权限表格 */
+        /* 表格 */
         .table-container { overflow-x: auto; }
-        .data-table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
-        .data-table th { background: var(--bg-surface); font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
-        .data-table tr:hover { background: var(--bg-hover); }
-        .perm-badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .perm-on { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
-        .perm-off { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .data-table { width: 100%; border-collapse: collapse; min-width: 500px; }
+        .data-table th, .data-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+        .data-table th { background: rgba(74, 144, 226, 0.05); font-size: 11px; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.5px; }
+        .data-table tr:hover td { background: rgba(74, 144, 226, 0.02); }
+        .perm-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .perm-on { background: rgba(34, 197, 94, 0.12); color: #16a34a; }
+        .perm-off { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
 
-        /* 权限复选框组 */
-        .perm-checkboxes { display: flex; gap: 16px; flex-wrap: wrap; }
-        .perm-checkbox { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-        .perm-checkbox input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
-        .perm-checkbox label { font-size: 13px; cursor: pointer; }
+        /* 复选框 */
+        .perm-checkboxes { display: flex; gap: 20px; flex-wrap: wrap; }
+        .perm-checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+        .perm-checkbox input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
 
-        .loading { text-align: center; padding: 40px; color: var(--text-secondary); }
-        .empty-state { text-align: center; padding: 40px; color: var(--text-secondary); }
+        /* 全选行 */
+        .select-all-row { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: rgba(74, 144, 226, 0.05); border-radius: var(--radius); margin-bottom: 14px; }
+        .select-all-row label { font-size: 14px; cursor: pointer; }
 
-        /* 按钮和工具栏 */
-        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
-        .btn { padding: 8px 16px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
-        .btn-primary { background: var(--accent); color: white; }
-        .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
-        .btn:hover { transform: translateY(-1px); }
-        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        /* 状态提示 */
+        .loading, .empty-state { text-align: center; padding: 60px 20px; color: var(--text-soft); font-size: 14px; }
 
         /* Modal */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(29, 43, 90, 0.4); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
         .modal.active { display: flex; }
-        .modal-box { background: var(--bg-card); border-radius: var(--radius-lg); padding: 24px; width: 90%; max-width: 700px; max-height: 80vh; overflow-y: auto; }
-        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; width: 100%; }
-        .form-group { margin-bottom: 14px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: var(--text-secondary); }
-        .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; background: var(--bg-input); color: var(--text-primary); }
-        .form-control:focus { outline: none; border-color: var(--accent); }
-        .form-control[readonly] { background: var(--bg-surface); }
+        .modal-box { background: var(--card); border-radius: var(--radius); padding: 28px; width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(29, 43, 90, 0.15); }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: var(--text-soft); }
+        .form-control { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; font-size: 14px; background: var(--bg); color: var(--text); transition: var(--transition); }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1); }
+        .form-control[readonly] { background: rgba(74, 144, 226, 0.05); }
         textarea.form-control { resize: vertical; min-height: 100px; font-family: inherit; }
-        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
-        .import-area { width: 100%; height: 200px; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; font-size: 12px; font-family: monospace; background: var(--bg-input); color: var(--text-primary); resize: vertical; }
-        .import-area:focus { outline: none; border-color: var(--accent); }
-        .import-help { font-size: 11px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5; }
-        .import-result { margin-top: 10px; padding: 10px; border-radius: var(--radius); font-size: 13px; display: none; }
-        .import-result.success { background: rgba(34, 197, 94, 0.1); color: #22c55e; display: block; }
-        .import-result.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; display: block; }
-
-        .select-all-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--bg-surface); border-radius: var(--radius); margin-bottom: 12px; }
-        .select-all-row label { font-size: 13px; cursor: pointer; }
+        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+        .import-area { width: 100%; height: 180px; border: 1px solid var(--border); border-radius: 14px; padding: 12px; font-size: 13px; font-family: monospace; background: var(--bg); color: var(--text); resize: vertical; }
+        .import-area:focus { outline: none; border-color: var(--primary); }
+        .import-help { font-size: 12px; color: var(--text-soft); margin-top: 8px; line-height: 1.5; }
+        .import-result { margin-top: 12px; padding: 12px; border-radius: 12px; font-size: 13px; display: none; }
+        .import-result.success { background: rgba(34, 197, 94, 0.1); color: #16a34a; display: block; }
+        .import-result.error { background: rgba(239, 68, 68, 0.1); color: #dc2626; display: block; }
 
         /* 报餐权限样式 */
-        .meal-perm-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
-        .meal-perm-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-        .meal-perm-title { font-size: 15px; font-weight: 600; }
-        .meal-perm-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
-        .meal-perm-stats { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-surface); border-radius: var(--radius); margin-bottom: 12px; }
-        .meal-perm-stats .stat-num { font-size: 20px; font-weight: 700; color: var(--accent); }
-        .meal-perm-stats .stat-label { font-size: 13px; color: var(--text-secondary); }
-        .meal-perm-search { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-        .meal-perm-search .form-control { flex: 1; min-width: 120px; }
-        .meal-perm-list { max-height: 500px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.2) transparent; }
-        .meal-perm-list::-webkit-scrollbar { height: 6px; }
-        .meal-perm-list::-webkit-scrollbar-track { background: transparent; border-radius: 3px; }
-        .meal-perm-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 3px; }
-        .meal-perm-list::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.35); }
-        .meal-perm-list::-webkit-scrollbar-corner { background: transparent; }
-        .meal-perm-list-header { display: flex; align-items: center; padding: 10px 12px; background: var(--bg-surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; gap: 10px; }
-        .meal-perm-list-header input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
-        .meal-perm-list-header .col-id { width: 90px; font-weight: 600; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; flex-shrink: 0; text-align: left; }
-        .meal-perm-list-header .col-name { width: 70px; font-weight: 600; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; flex-shrink: 0; text-align: left; }
-        .meal-perm-list-header .col-dept { width: 120px; font-weight: 600; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; flex-shrink: 0; text-align: left; }
-        .meal-perm-list-header .col-team { flex: 1; font-weight: 600; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; text-align: left; min-width: 0; }
-        .meal-perm-list-header .col-action { width: 60px; font-weight: 600; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; text-align: left; flex-shrink: 0; }
-        .meal-perm-list-item { display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; gap: 10px; }
+        .meal-perm-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+        .meal-perm-header { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+        .meal-perm-title { font-size: 16px; font-weight: 600; }
+        .meal-perm-desc { font-size: 13px; color: var(--text-soft); margin-bottom: 16px; }
+        .meal-perm-stat { display: inline-flex; align-items: center; padding: 6px 14px; background: var(--bg); border-radius: 12px; font-size: 13px; color: var(--text-soft); }
+        .meal-perm-stat .stat-num { font-size: 16px; font-weight: 700; color: var(--primary); margin-right: 4px; }
+        .meal-perm-search { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+        .meal-perm-search .form-control { flex: 1; min-width: 140px; }
+        .meal-perm-list-wrap { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .meal-perm-list { max-height: 400px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(74, 144, 226, 0.3) transparent; }
+        .meal-perm-list::-webkit-scrollbar { width: 6px; }
+        .meal-perm-list::-webkit-scrollbar-track { background: transparent; }
+        .meal-perm-list::-webkit-scrollbar-thumb { background: rgba(74, 144, 226, 0.3); border-radius: 3px; }
+        .meal-perm-list-header { display: flex; align-items: center; padding: 12px 16px; background: rgba(74, 144, 226, 0.05); border-bottom: 1px solid var(--border); gap: 10px; }
+        .meal-perm-list-header input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+        .meal-perm-list-header .col-id { width: 90px; font-weight: 600; font-size: 11px; color: var(--text-soft); text-transform: uppercase; flex-shrink: 0; }
+        .meal-perm-list-header .col-name { width: 70px; font-weight: 600; font-size: 11px; color: var(--text-soft); text-transform: uppercase; flex-shrink: 0; }
+        .meal-perm-list-header .col-dept { width: 110px; font-weight: 600; font-size: 11px; color: var(--text-soft); text-transform: uppercase; flex-shrink: 0; }
+        .meal-perm-list-header .col-team { flex: 1; font-weight: 600; font-size: 11px; color: var(--text-soft); text-transform: uppercase; min-width: 0; }
+        .meal-perm-list-header .col-action { width: 60px; font-weight: 600; font-size: 11px; color: var(--text-soft); text-transform: uppercase; flex-shrink: 0; }
+        .meal-perm-list-item { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: var(--transition); gap: 10px; }
         .meal-perm-list-item:last-child { border-bottom: none; }
-        .meal-perm-list-item:hover { background: var(--bg-hover); }
-        .meal-perm-list-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
-        .meal-perm-list-item .col-id { width: 90px; font-weight: 600; font-size: 13px; flex-shrink: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .meal-perm-list-item .col-name { width: 70px; flex-shrink: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .meal-perm-list-item .col-dept { width: 120px; color: var(--text-secondary); font-size: 12px; flex-shrink: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .meal-perm-list-item .col-team { flex: 1; color: var(--text-secondary); font-size: 12px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-        .meal-perm-list-item .col-action { width: 60px; color: var(--text-secondary); font-size: 12px; flex-shrink: 0; text-align: left; }
-        .btn-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .meal-perm-list-item:hover { background: rgba(74, 144, 226, 0.03); }
+        .meal-perm-list-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+        .meal-perm-list-item .col-id { width: 90px; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+        .meal-perm-list-item .col-name { width: 70px; flex-shrink: 0; font-size: 13px; }
+        .meal-perm-list-item .col-dept { width: 110px; color: var(--text-soft); font-size: 12px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .meal-perm-list-item .col-team { flex: 1; color: var(--text-soft); font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .meal-perm-list-item .col-action { width: 60px; flex-shrink: 0; }
+
+        /* 6S权限样式 - 与管理员卡片一致 */
+        .s6-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; padding-top: 5px; }
+        .s6-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; transition: var(--transition); }
+        .s6-item:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 12px 28px rgba(74, 144, 226, 0.1); }
+        .s6-item-top { display: flex; align-items: center; justify-content: space-between; }
+        .s6-info { display: flex; align-items: center; gap: 14px; flex: 1; }
+        .s6-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2); }
+        .s6-name { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+        .s6-meta { font-size: 12px; color: var(--text-soft); }
+        .s6-actions { flex-shrink: 0; }
+
+        .btn-danger { background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.15); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15); }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .meal-perm-stats { flex-wrap: wrap; }
+            .meal-perm-stat { min-width: 80px; padding: 12px 16px; }
+            .meal-perm-stat .stat-num { font-size: 22px; }
+            .meal-perm-list-header .col-team, .meal-perm-list-item .col-team { display: none; }
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .wrap { padding: 0 12px; }
+            .page-header { padding: 12px 0; margin-bottom: 16px; }
+            .admin-list { grid-template-columns: 1fr; gap: 12px; }
+            .meal-perm-list { max-height: 350px; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="toolbar">
-            <div class="page-title">权限管理</div>
-            <div style="display: flex; gap: 10px;">
+    <header class="page-header fade-item">
+        <div class="wrap">
+            <span class="page-logo">权限管理</span>
+            <div class="header-right">
+                <button class="btn btn-secondary btn-sm" onclick="showLogModal()">日志</button>
                 <button class="btn btn-secondary btn-sm" onclick="location.href='dashboard.html'">返回</button>
                 <button class="btn btn-primary btn-sm" id="addAdminBtn" onclick="showAddAdminModal()">+ 添加管理员</button>
                 <button class="btn btn-primary btn-sm" id="addS6Btn" style="display: none;" onclick="showAddS6Modal()">+ 添加6S权限</button>
             </div>
         </div>
+    </header>
 
-        <div class="perm-tabs">
-            <button class="perm-tab active" onclick="switchTab('admin')">管理员</button>
-            <button class="perm-tab" onclick="switchTab('exam')">考试权限</button>
-            <button class="perm-tab" onclick="switchTab('meal')">报餐权限</button>
-            <button class="perm-tab" onclick="switchTab('s6')">6S权限</button>
-            <button class="perm-tab" onclick="switchTab('file')">文件权限</button>
+    <div class="wrap">
+        <div class="perm-tabs fade-item">
+            <button class="perm-tab active" onclick="switchTab('admin')" data-tab="admin">管理员</button>
+            <button class="perm-tab" onclick="switchTab('exam')" data-tab="exam">考试权限</button>
+            <button class="perm-tab" onclick="switchTab('meal')" data-tab="meal">报餐权限</button>
+            <button class="perm-tab" onclick="switchTab('s6')" data-tab="s6">6S权限</button>
+            <button class="perm-tab" onclick="switchTab('file')" data-tab="file">文件权限</button>
+            <div class="perm-tab-indicator"></div>
         </div>
 
-        <!-- 管理员管理 -->
-        <div id="section-admin" class="perm-section active">
-            <div id="adminList" class="admin-list"></div>
-        </div>
-
-        <!-- 考试权限 -->
-        <div id="section-exam" class="perm-section">
-            <div class="toolbar" style="margin-bottom: 12px;">
-                <div style="font-size: 13px; color: var(--text-secondary);">点击考试名称查看/编辑权限人员</div>
-                <button class="btn btn-secondary btn-sm" onclick="showExamImportModal()">批量导入</button>
-            </div>
-            <div class="resource-list" id="examList"></div>
-        </div>
-
-        <!-- 报餐权限 -->
-        <div id="section-meal" class="perm-section">
-            <!-- 客餐权限全局配置 -->
-            <div class="meal-perm-card">
-                <div class="meal-perm-header">
-                    <div class="meal-perm-title">🍱 客餐权限配置</div>
-                    <button class="btn btn-primary btn-sm" onclick="saveGuestMealPermAll()">保存权限</button>
-                </div>
-                <div class="meal-perm-desc">配置哪些员工可以报客餐（访客/外部人员）</div>
-                <div class="meal-perm-stats">
-                    <div>
-                        <div class="stat-num" id="guestMealCount">0</div>
-                        <div class="stat-label">人有客餐权限</div>
-                    </div>
-                </div>
-                <div class="meal-perm-search">
-                    <input type="text" id="searchGuestMealKeyword" class="form-control" placeholder="搜索工号/姓名..." oninput="filterGuestMealStaff()">
-                    <select id="searchGuestMealDept" class="form-control" onchange="onDeptChange()">
-                        <option value="">全部部门</option>
-                    </select>
-                    <select id="searchGuestMealTeam" class="form-control" onchange="filterGuestMealStaff()">
-                        <option value="">全部班组</option>
-                    </select>
-                </div>
-                <div id="guestMealStaffList" class="meal-perm-list"></div>
+        <!-- 标签页内容区域 -->
+        <div class="perm-tabs-container">
+            <!-- 管理员管理 -->
+            <div id="section-admin" class="perm-section active">
+                <div id="adminList" class="admin-list"></div>
             </div>
 
-        </div>
-
-        <!-- 6S权限 -->
-        <div id="section-s6" class="perm-section">
-            <div id="s6StaffList" class="admin-list"></div>
-        </div>
-
-        <!-- 文件权限 -->
-        <div id="section-file" class="perm-section">
-            <div class="toolbar" style="margin-bottom: 12px;">
-                <div style="font-size: 13px; color: var(--text-secondary);">
-                    <strong>公共权限：</strong>按权限可见 | <strong>个人权限：</strong>仅可见自己上传的文件
+            <!-- 考试权限 -->
+            <div id="section-exam" class="perm-section">
+                <div class="toolbar" style="margin-bottom: 12px;">
+                    <div style="font-size: 13px; color: var(--text-secondary);">点击考试名称查看/编辑权限人员</div>
+                    <button class="btn btn-secondary btn-sm" onclick="showExamImportModal()">批量导入</button>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-secondary btn-sm" onclick="showFilePublicImportModal()">公共批量导入</button>
-                    <button class="btn btn-secondary btn-sm" onclick="showFilePersonalImportModal()">个人批量导入</button>
+                <div class="resource-list" id="examList"></div>
+            </div>
+
+            <!-- 报餐权限 -->
+            <div id="section-meal" class="perm-section">
+                <div class="meal-perm-card fade-item">
+                    <div class="meal-perm-header">
+                        <div class="meal-perm-title">客餐权限配置</div>
+                        <div class="meal-perm-stat">
+                            <span class="stat-num" id="guestMealCountNum">0</span>
+                            <span>人有客餐权限</span>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="saveGuestMealPermAll()" style="margin-left: auto;">保存权限</button>
+                    </div>
+                    <div class="meal-perm-desc">配置哪些员工可以报客餐（访客/外部人员）</div>
+                    <div class="meal-perm-search">
+                        <input type="text" id="searchGuestMealKeyword" class="form-control" placeholder="搜索工号/姓名..." oninput="filterGuestMealStaff()">
+                        <select id="searchGuestMealDept" class="form-control" onchange="onDeptChange()">
+                            <option value="">全部部门</option>
+                        </select>
+                        <select id="searchGuestMealTeam" class="form-control" onchange="filterGuestMealStaff()">
+                            <option value="">全部班组</option>
+                        </select>
+                    </div>
+                    <div class="meal-perm-list-wrap">
+                        <div class="meal-perm-list-header">
+                            <input type="checkbox" id="selectAllGuestMeal">
+                            <span class="col-id">工号</span>
+                            <span class="col-name">姓名</span>
+                            <span class="col-dept">部门</span>
+                            <span class="col-team">班组</span>
+                            <span class="col-action">操作</span>
+                        </div>
+                        <div id="guestMealStaffList" class="meal-perm-list"></div>
+                    </div>
                 </div>
             </div>
-            <div class="resource-list">
-                <div class="resource-item open" onclick="toggleResource(this)">
-                    <div class="resource-header">
-                        <div class="resource-title">📁 公共文件权限</div>
-                        <div class="resource-arrow">▶</div>
+
+            <!-- 6S权限 -->
+            <div id="section-s6" class="perm-section">
+                <div id="s6StaffList" class="s6-list"></div>
+            </div>
+
+            <!-- 文件权限 -->
+            <div id="section-file" class="perm-section">
+                <div class="toolbar" style="margin-bottom: 12px;">
+                    <div style="font-size: 13px; color: var(--text-secondary);">
+                        <strong>公共权限：</strong>按权限可见 | <strong>个人权限：</strong>仅可见自己上传的文件
                     </div>
-                    <div class="resource-body" id="filePublicBody"></div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary btn-sm" onclick="showFilePublicImportModal()">公共批量导入</button>
+                        <button class="btn btn-secondary btn-sm" onclick="showFilePersonalImportModal()">个人批量导入</button>
+                    </div>
                 </div>
-                <div class="resource-item" onclick="toggleResource(this)">
-                    <div class="resource-header">
-                        <div class="resource-title">👤 个人文件权限</div>
-                        <div class="resource-arrow">▶</div>
+                <div class="resource-list">
+                    <div class="resource-item open" onclick="toggleResource(this)">
+                        <div class="resource-header">
+                            <div class="resource-title">公共文件权限</div>
+                            <div class="resource-right">
+                                <span class="resource-arrow">›</span>
+                            </div>
+                        </div>
+                        <div class="resource-body" id="filePublicBody"></div>
                     </div>
-                    <div class="resource-body" id="filePersonalBody"></div>
+                    <div class="resource-item" onclick="toggleResource(this)">
+                        <div class="resource-header">
+                            <div class="resource-title">个人文件权限</div>
+                            <div class="resource-right">
+                                <span class="resource-arrow">›</span>
+                            </div>
+                        </div>
+                        <div class="resource-body" id="filePersonalBody"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -224,21 +303,35 @@
 
     <!-- 添加管理员弹窗 -->
     <div class="modal" id="adminModal">
-        <div class="modal-box" style="max-width: 340px; padding: 16px;">
+        <div class="modal-box" style="max-width: 480px; padding: 20px;">
             <div class="modal-title" id="adminModalTitle">添加管理员</div>
             <form onsubmit="handleAdminSave(event)">
                 <input type="hidden" id="adminId">
-                <div class="form-group">
-                    <label>工号 *</label>
-                    <input type="text" id="adminEmployeeId" class="form-control" required placeholder="员工工号" autocomplete="off">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>工号 *</label>
+                        <input type="text" id="adminEmployeeId" class="form-control" required placeholder="员工工号" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>姓名</label>
+                        <input type="text" id="adminName" class="form-control" placeholder="输入姓名自动匹配" autocomplete="off">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>姓名</label>
-                    <input type="text" id="adminName" class="form-control" placeholder="输入姓名或工号自动匹配" autocomplete="off">
-                </div>
-                <div class="form-group">
+                <div class="form-group" id="passwordGroup">
                     <label>密码 <span id="passwordHint" style="color: var(--text-secondary); font-weight: normal;">（至少6位）</span></label>
                     <input type="password" id="adminPassword" class="form-control" required placeholder="登录密码">
+                </div>
+                <div class="form-group">
+                    <label style="margin-bottom: 10px;">系统权限</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                        <label class="perm-checkbox"><input type="checkbox" id="permStaff" value="1"> 员工管理</label>
+                        <label class="perm-checkbox"><input type="checkbox" id="permTraining" value="1"> 培训管理</label>
+                        <label class="perm-checkbox"><input type="checkbox" id="permMeal" value="1"> 报餐系统</label>
+                        <label class="perm-checkbox"><input type="checkbox" id="permVoting" value="1"> 投票系统</label>
+                        <label class="perm-checkbox"><input type="checkbox" id="perm6s" value="1"> 6S管理</label>
+                        <label class="perm-checkbox"><input type="checkbox" id="permPermission" value="1"> 权限管理</label>
+                        <label class="perm-checkbox"><input type="checkbox" id="permFile" value="1"> 文件管理</label>
+                    </div>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary btn-sm" onclick="closeAdminModal()">取消</button>
@@ -362,6 +455,17 @@ A002,李四,1,1,0"></textarea>
         </div>
     </div>
 
+    <!-- 日志弹窗 -->
+    <div class="modal" id="logModal">
+        <div class="modal-box" style="max-width: 600px;">
+            <div class="modal-title">
+                <span>操作日志</span>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeLogModal()" style="margin-left: auto;">关闭</button>
+            </div>
+            <div id="logList" style="max-height: 400px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
     <script src="js/api.js"></script>
     <script src="js/xlsx.full.min.js"></script>
     <script>
@@ -371,9 +475,62 @@ A002,李四,1,1,0"></textarea>
         let currentTab = 'admin';
         let currentExamId = null;
         let allStaff = [];
+        let actionLogs = [];
+
+        const tabNames = { admin: '管理员', exam: '考试权限', meal: '报餐权限', s6: '6S权限', file: '文件权限' };
+
+        function logAction(action, status = 'success') {
+            fetch(`${API_URL}/admin/log`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tab: tabNames[currentTab], action, status })
+            }).catch(err => console.error('记录日志失败:', err));
+        }
+
+        async function loadLogs() {
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const isAdmin = currentUser.id === 1;
+                const url = isAdmin
+                    ? `${API_URL}/admin/logs?tab=${encodeURIComponent(tabNames[currentTab])}`
+                    : `${API_URL}/admin/logs?tab=${encodeURIComponent(tabNames[currentTab])}&user_id=${currentUser.id}`;
+                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.code === 0) {
+                    actionLogs = data.data || [];
+                }
+            } catch (err) { console.error('加载日志失败:', err); }
+        }
+
+        async function showLogModal() {
+            await loadLogs();
+            const logList = document.getElementById('logList');
+            if (actionLogs.length === 0) {
+                logList.innerHTML = '<div class="empty-state">暂无操作记录</div>';
+            } else {
+                logList.innerHTML = '<div style="display: flex; flex-direction: column; gap: 8px;">' + actionLogs.map(log => `
+                    <div style="padding: 10px 12px; background: ${log.status === 'fail' ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg)'}; border-radius: 10px; font-size: 13px; border-left: 3px solid ${log.status === 'fail' ? '#dc2626' : 'var(--primary)'};">
+                        <span style="color: ${log.status === 'fail' ? '#dc2626' : 'var(--primary)'}; font-weight: 600;">${log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '-'}</span>
+                        <span style="margin: 0 8px; color: var(--text-soft);">|</span>
+                        <span style="background: rgba(74, 144, 226, 0.1); padding: 2px 8px; border-radius: 6px;">${log.tab}</span>
+                        <span style="margin-left: 8px; color: var(--text-soft);">by ${log.username}</span>
+                        ${log.status === 'fail' ? '<span style="margin-left: 8px; color: #dc2626; font-size: 12px;">失败</span>' : ''}
+                        <div style="margin-top: 4px; color: ${log.status === 'fail' ? '#dc2626' : 'var(--text)'};">${log.action}</div>
+                    </div>
+                `).join('') + '</div>';
+            }
+            document.getElementById('logModal').classList.add('active');
+        }
+
+        function closeLogModal() {
+            document.getElementById('logModal').classList.remove('active');
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             if (!token) { window.location.href = 'admin/login.html'; return; }
+            // 权限检查
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            if (!currentUser.can_manage_permission) { alert('无权限访问权限管理'); window.location.href = 'dashboard.html'; return; }
             loadAllData();
             // 工号输入匹配姓名
             document.getElementById('adminEmployeeId').addEventListener('blur', async function() {
@@ -407,17 +564,109 @@ A002,李四,1,1,0"></textarea>
                     }
                 } catch (e) { /* ignore */ }
             });
+            // 检查是否为admin账号，只有admin才能添加管理员
+            if (currentUser.id !== 1) {
+                document.getElementById('addAdminBtn').style.display = 'none';
+            }
+            // 初始化标签指示器
+            initTabIndicator();
+            // 序列入场动画
+            const items = document.querySelectorAll('.fade-item');
+            items.forEach((el, i) => {
+                setTimeout(() => el.classList.add('fade-in'), 100 * i);
+            });
         });
 
+        let lastTab = 'admin';
+        let tabSwitching = false;
         function switchTab(tab) {
-            currentTab = tab;
+            if (currentTab === tab || tabSwitching) return;
+            tabSwitching = true;
+
+            // 更新指示器位置
+            const indicator = document.querySelector('.perm-tab-indicator');
+            const activeTab = document.querySelector(`.perm-tab[data-tab="${tab}"]`);
+            if (indicator && activeTab) {
+                const tabRect = activeTab.getBoundingClientRect();
+                const containerRect = activeTab.parentElement.getBoundingClientRect();
+                // indicator初始left是6px，需要减去这个偏移
+                const left = tabRect.left - containerRect.left - 6;
+                indicator.style.transform = `translateX(${left}px)`;
+                indicator.style.width = `${tabRect.width}px`;
+            }
+
+            const oldSection = document.querySelector('.perm-section.active');
+            const newSection = document.getElementById(`section-${tab}`);
+            const tabOrder = ['admin', 'exam', 'meal', 's6', 'file'];
+            const tabIndex = tabOrder.indexOf(tab);
+            const lastIndex = tabOrder.indexOf(lastTab);
+            const direction = tabIndex > lastIndex ? 1 : -1; // 1=右滑, -1=左滑
+
+            // 旧section向左/右滑出
+            if (oldSection) {
+                oldSection.style.transition = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease';
+                oldSection.style.transform = `translateX(${direction * -100}%)`;
+                oldSection.style.opacity = '0';
+                setTimeout(() => {
+                    oldSection.classList.remove('active');
+                    oldSection.style.transition = '';
+                    oldSection.style.transform = '';
+                    oldSection.style.opacity = '';
+                }, 350);
+            }
+
+            // 新section从反方向滑入
+            newSection.classList.add('active');
+            newSection.style.transform = `translateX(${direction * 100}%)`;
+            newSection.style.opacity = '0';
+            newSection.style.transition = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease';
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    newSection.style.transform = 'translateX(0)';
+                    newSection.style.opacity = '1';
+                });
+            });
+
+            // 动画完成后重置样式
+            setTimeout(() => {
+                newSection.style.transition = '';
+                newSection.style.transform = '';
+                newSection.style.opacity = '';
+                // 触发内容入场动画
+                newSection.querySelectorAll('.fade-item').forEach((el, i) => {
+                    el.classList.remove('fade-in');
+                    setTimeout(() => el.classList.add('fade-in'), 80 * i);
+                });
+                tabSwitching = false;
+            }, 380);
+
+            // 更新标签状态
             document.querySelectorAll('.perm-tab').forEach(t => t.classList.remove('active'));
-            document.querySelector(`.perm-tab[onclick="switchTab('${tab}')"]`).classList.add('active');
-            document.querySelectorAll('.perm-section').forEach(s => s.classList.remove('active'));
-            document.getElementById(`section-${tab}`).classList.add('active');
-            // 只在对应标签页显示添加按钮
-            document.getElementById('addAdminBtn').style.display = tab === 'admin' ? '' : 'none';
+            document.querySelector(`.perm-tab[data-tab="${tab}"]`).classList.add('active');
+
+            lastTab = currentTab;
+            currentTab = tab;
+
+            // 只在对应标签页显示添加按钮，且只有admin账号可见
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const isAdmin = currentUser.id === 1;
+            document.getElementById('addAdminBtn').style.display = (tab === 'admin' && isAdmin) ? '' : 'none';
             document.getElementById('addS6Btn').style.display = tab === 's6' ? '' : 'none';
+        }
+
+        // 初始化指示器位置
+        function initTabIndicator() {
+            const indicator = document.querySelector('.perm-tab-indicator');
+            const activeTab = document.querySelector('.perm-tab.active');
+            if (indicator && activeTab) {
+                const tabRect = activeTab.getBoundingClientRect();
+                const containerRect = activeTab.parentElement.getBoundingClientRect();
+                // indicator初始left是6px，需要减去这个偏移
+                const left = tabRect.left - containerRect.left - 6;
+                indicator.style.transform = `translateX(${left}px)`;
+                indicator.style.width = `${tabRect.width}px`;
+            }
         }
 
         async function loadAllData() {
@@ -448,15 +697,36 @@ A002,李四,1,1,0"></textarea>
             if (admins.length === 0) {
                 list.innerHTML = '<div class="empty-state">暂无管理员</div>'; return;
             }
+            const systems = [
+                { key: 'can_manage_staff', label: '员工' },
+                { key: 'can_manage_training', label: '培训' },
+                { key: 'can_manage_meal', label: '报餐' },
+                { key: 'can_manage_voting', label: '投票' },
+                { key: 'can_manage_6s', label: '6S' },
+                { key: 'can_manage_permission', label: '权限' },
+                { key: 'can_manage_file', label: '文件' }
+            ];
             list.innerHTML = admins.map(admin => `
                 <div class="admin-item">
-                    <div class="admin-info">
-                        <div class="admin-avatar">${(admin.nickname || '管').charAt(0)}</div>
-                        <div><div class="admin-name">${admin.nickname || admin.username}</div><div style="font-size:12px;color:var(--text-secondary)">工号: ${admin.username}</div></div>
+                    <div class="admin-item-top">
+                        <div class="admin-info">
+                            <div class="admin-avatar">${(admin.nickname || '管').charAt(0)}</div>
+                            <div>
+                                <div class="admin-name">${admin.nickname || admin.username}</div>
+                                <div class="admin-meta">工号: ${admin.username}</div>
+                            </div>
+                        </div>
+                        <div class="admin-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="editAdmin(${admin.id})">编辑</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteAdmin(${admin.id})" ${admin.id === 1 ? 'disabled' : ''}>删除</button>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn btn-secondary btn-sm" onclick="editAdmin(${admin.id})">编辑</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteAdmin(${admin.id})" ${admin.id === 1 ? 'disabled' : ''}>删除</button>
+                    <div class="admin-systems">
+                        ${systems.map(s => `
+                            <span class="sys-tag ${admin[s.key] ? 'on' : 'off'}">
+                                ${admin[s.key] ? '✓' : '○'} ${s.label}
+                            </span>
+                        `).join('')}
                     </div>
                 </div>
             `).join('');
@@ -471,6 +741,15 @@ A002,李四,1,1,0"></textarea>
             document.getElementById('adminPassword').value = '';
             document.getElementById('adminPassword').required = true;
             document.getElementById('passwordHint').style.display = '';
+            document.getElementById('passwordGroup').style.display = '';
+            // 清空权限复选框
+            document.getElementById('permStaff').checked = false;
+            document.getElementById('permTraining').checked = false;
+            document.getElementById('permMeal').checked = false;
+            document.getElementById('permVoting').checked = false;
+            document.getElementById('perm6s').checked = false;
+            document.getElementById('permPermission').checked = false;
+            document.getElementById('permFile').checked = false;
             document.getElementById('adminModal').classList.add('active');
         }
 
@@ -485,6 +764,15 @@ A002,李四,1,1,0"></textarea>
             document.getElementById('adminPassword').value = '';
             document.getElementById('adminPassword').required = false;
             document.getElementById('passwordHint').style.display = 'none';
+            document.getElementById('passwordGroup').style.display = 'none';
+            // 设置权限复选框
+            document.getElementById('permStaff').checked = admin.can_manage_staff == 1;
+            document.getElementById('permTraining').checked = admin.can_manage_training == 1;
+            document.getElementById('permMeal').checked = admin.can_manage_meal == 1;
+            document.getElementById('permVoting').checked = admin.can_manage_voting == 1;
+            document.getElementById('perm6s').checked = admin.can_manage_6s == 1;
+            document.getElementById('permPermission').checked = admin.can_manage_permission == 1;
+            document.getElementById('permFile').checked = admin.can_manage_file == 1;
             document.getElementById('adminModal').classList.add('active');
         }
 
@@ -493,11 +781,27 @@ A002,李四,1,1,0"></textarea>
         async function handleAdminSave(e) {
             e.preventDefault();
             const id = document.getElementById('adminId').value;
-            const data = {
-                username: document.getElementById('adminEmployeeId').value,
-                nickname: document.getElementById('adminName').value
+            const empId = document.getElementById('adminEmployeeId').value;
+            const data = id ? {
+                can_manage_staff: document.getElementById('permStaff').checked ? 1 : 0,
+                can_manage_training: document.getElementById('permTraining').checked ? 1 : 0,
+                can_manage_meal: document.getElementById('permMeal').checked ? 1 : 0,
+                can_manage_voting: document.getElementById('permVoting').checked ? 1 : 0,
+                can_manage_6s: document.getElementById('perm6s').checked ? 1 : 0,
+                can_manage_permission: document.getElementById('permPermission').checked ? 1 : 0,
+                can_manage_file: document.getElementById('permFile').checked ? 1 : 0
+            } : {
+                username: empId,
+                nickname: document.getElementById('adminName').value,
+                can_manage_staff: document.getElementById('permStaff').checked ? 1 : 0,
+                can_manage_training: document.getElementById('permTraining').checked ? 1 : 0,
+                can_manage_meal: document.getElementById('permMeal').checked ? 1 : 0,
+                can_manage_voting: document.getElementById('permVoting').checked ? 1 : 0,
+                can_manage_6s: document.getElementById('perm6s').checked ? 1 : 0,
+                can_manage_permission: document.getElementById('permPermission').checked ? 1 : 0,
+                can_manage_file: document.getElementById('permFile').checked ? 1 : 0,
+                password: document.getElementById('adminPassword').value
             };
-            if (!id) data.password = document.getElementById('adminPassword').value;
             const btn = document.getElementById('adminSaveBtn');
             btn.textContent = '保存中...'; btn.disabled = true;
             try {
@@ -506,22 +810,25 @@ A002,李四,1,1,0"></textarea>
                 const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
                 const resData = await res.json();
                 if (resData.code === 0) {
+                    logAction(id ? `编辑管理员 ${empId}` : `添加管理员 ${empId}`);
                     alert(id ? '更新成功' : '添加成功');
                     closeAdminModal();
                     loadAdmins();
-                } else { alert(resData.msg || '操作失败'); }
-            } catch (err) { alert('操作失败'); }
+                } else { logAction(resData.msg || '操作失败', 'fail'); alert(resData.msg || '操作失败'); }
+            } catch (err) { logAction('网络错误', 'fail'); alert('操作失败'); }
             btn.textContent = '保存'; btn.disabled = false;
         }
 
         async function deleteAdmin(id) {
             if (!confirm('确定删除此管理员？')) return;
+            const admin = admins.find(a => a.id === id);
+            const adminName = admin?.nickname || admin?.username || id;
             try {
                 const res = await fetch(`${API_URL}/admin/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
                 const data = await res.json();
-                if (data.code === 0) { alert('删除成功'); loadAdmins(); }
-                else { alert(data.msg || '删除失败'); }
-            } catch (err) { alert('删除失败'); }
+                if (data.code === 0) { logAction(`删除管理员 ${adminName}`); alert('删除成功'); loadAdmins(); }
+                else { logAction(`删除管理员失败：${data.msg || adminName}`, 'fail'); alert(data.msg || '删除失败'); }
+            } catch (err) { logAction(`删除管理员失败：网络错误`, 'fail'); alert('删除失败'); }
         }
 
         // ============ 考试权限 ============
@@ -541,15 +848,15 @@ A002,李四,1,1,0"></textarea>
                 list.innerHTML = '<div class="empty-state">暂无考试</div>'; return;
             }
             list.innerHTML = exams.map(exam => `
-                <div class="resource-item" onclick="openExamModal(${exam.id}, '${exam.title.replace(/'/g, "\\'")}')">
+                <div class="resource-item fade-item" onclick="openExamModal(${exam.id}, '${exam.title.replace(/'/g, "\\'")}')">
                     <div class="resource-header">
                         <div>
-                            <div class="resource-title">📝 ${exam.title}</div>
+                            <div class="resource-title">${exam.title}</div>
                             <div class="resource-meta">时长: ${exam.duration}分钟 | 及格: ${exam.pass_score}分</div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="resource-right">
                             <span class="perm-count">${exam.perm_count || 0}人已授权</span>
-                            <span class="resource-arrow">▶</span>
+                            <span class="resource-arrow">›</span>
                         </div>
                     </div>
                 </div>
@@ -629,11 +936,12 @@ A002,李四,1,1,0"></textarea>
                 });
                 const data = await res.json();
                 if (data.code === 0) {
+                    logAction(`保存考试权限，已选 ${selected.length} 人`);
                     alert('保存成功');
                     closeExamModal();
                     loadExamPerms();
-                } else { alert(data.msg || '保存失败'); }
-            } catch (err) { alert('保存失败'); }
+                } else { logAction(`保存考试权限失败：${data.msg || ''}`, 'fail'); alert(data.msg || '保存失败'); }
+            } catch (err) { logAction('保存考试权限失败：网络错误', 'fail'); alert('保存失败'); }
         }
 
         function showExamImportModal() {
@@ -657,6 +965,7 @@ A002,李四,1,1,0"></textarea>
                 }
             }
             if (data.length === 0) {
+                logAction('导入失败：没有有效数据', 'fail');
                 document.getElementById('examImportResult').className = 'import-result error';
                 document.getElementById('examImportResult').textContent = '没有有效数据';
                 return;
@@ -673,9 +982,12 @@ A002,李四,1,1,0"></textarea>
                     let msg = `成功 ${d.success} 条`;
                     if (d.fail > 0) {
                         msg += `，失败 ${d.fail} 条`;
+                        logAction(`批量导入：${msg}`, 'fail');
                         if (d.errors && d.errors.length > 0) {
                             msg += `\n错误列表：\n` + d.errors.map(e => `${e.employee_id || '(空)'}${e.name ? '(' + e.name + ')' : ''}: ${e.error}`).join('\n');
                         }
+                    } else {
+                        logAction(`批量导入：成功 ${d.success} 条`);
                     }
                     document.getElementById('examImportResult').className = d.fail > 0 ? 'import-result error' : 'import-result success';
                     document.getElementById('examImportResult').textContent = msg;
@@ -683,10 +995,12 @@ A002,李四,1,1,0"></textarea>
                         setTimeout(() => { closeExamImportModal(); loadExamPerms(); }, 1500);
                     }
                 } else {
+                    logAction(resData.msg || '导入失败', 'fail');
                     document.getElementById('examImportResult').className = 'import-result error';
                     document.getElementById('examImportResult').textContent = resData.msg || '导入失败';
                 }
             } catch (err) {
+                logAction('网络错误', 'fail');
                 document.getElementById('examImportResult').className = 'import-result error';
                 document.getElementById('examImportResult').textContent = '导入失败';
             }
@@ -701,7 +1015,7 @@ A002,李四,1,1,0"></textarea>
                 const data = await res.json();
                 if (data.code === 0) {
                     allGuestMealStaff = data.data.staff || [];
-                    document.getElementById('guestMealCount').textContent = data.data.withPermission || 0;
+                    document.getElementById('guestMealCountNum').textContent = data.data.withPermission || 0;
                     // 填充部门和班组下拉选项
                     populateDeptTeamDropdowns();
                     renderGuestMealList(allGuestMealStaff);
@@ -782,7 +1096,7 @@ A002,李四,1,1,0"></textarea>
 
         function updateGuestMealPermCount() {
             const checked = document.querySelectorAll('.guest-meal-check:checked').length;
-            document.getElementById('guestMealCount').textContent = checked;
+            document.getElementById('guestMealCountNum').textContent = checked;
             // Update select all state
             const total = document.querySelectorAll('.guest-meal-check').length;
             document.getElementById('selectAllGuestMeal').checked = checked === total && total > 0;
@@ -790,15 +1104,13 @@ A002,李四,1,1,0"></textarea>
 
         function saveGuestMealPermAll() {
             const selectedIds = Array.from(document.querySelectorAll('.guest-meal-check:checked')).map(cb => parseInt(cb.value));
-            document.getElementById('guestMealCount').textContent = selectedIds.length;
+            document.getElementById('guestMealCountNum').textContent = selectedIds.length;
             saveGuestMealPerm(selectedIds);
         }
 
         async function updateGuestMealPerm(staffId) {
-            // 单个勾选变化时更新
+            // 单个勾选变化时不记录日志，只更新计数
             updateGuestMealPermCount();
-            const selectedIds = Array.from(document.querySelectorAll('.guest-meal-check:checked')).map(cb => parseInt(cb.value));
-            await saveGuestMealPerm(selectedIds);
         }
 
         async function saveGuestMealPerm(selectedIds) {
@@ -813,16 +1125,19 @@ A002,李四,1,1,0"></textarea>
                 });
                 const data = await res.json();
                 if (data.code === 0) {
+                    logAction(`保存客餐权限，已选 ${selectedIds.length} 人`);
                     // 更新本地数据
                     allGuestMealStaff.forEach(s => {
                         s.guest_meal_permission = selectedIds.includes(s.id) ? 1 : 0;
                     });
                     alert('保存成功');
                 } else {
+                    logAction(`保存客餐权限失败：${data.msg || ''}`, 'fail');
                     alert(data.msg || '保存失败');
                     loadGuestMealPerms();
                 }
             } catch (err) {
+                logAction('保存客餐权限失败：网络错误', 'fail');
                 alert('保存失败');
                 loadGuestMealPerms();
             }
@@ -852,13 +1167,18 @@ A002,李四,1,1,0"></textarea>
             }
 
             list.innerHTML = staffWithPerm.map(s => `
-                <div class="admin-item">
-                    <div class="admin-info">
-                        <div class="admin-avatar">${(s.name || '6').charAt(0)}</div>
-                        <div><div class="admin-name">${s.name || s.employee_id}</div><div style="font-size:12px;color:var(--text-secondary)">工号: ${s.employee_id} | 部门: ${s.department || '-'}</div></div>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn btn-danger btn-sm" onclick="deleteS6Perm(${s.id})">删除</button>
+                <div class="s6-item">
+                    <div class="s6-item-top">
+                        <div class="s6-info">
+                            <div class="s6-avatar">${(s.name || '6').charAt(0)}</div>
+                            <div>
+                                <div class="s6-name">${s.name || s.employee_id}</div>
+                                <div class="s6-meta">工号: ${s.employee_id || '-'} | 部门: ${s.department || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="s6-actions">
+                            <button class="btn btn-danger btn-sm" onclick="deleteS6Perm(${s.id})">删除</button>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -915,6 +1235,7 @@ A002,李四,1,1,0"></textarea>
         async function handleAddS6Perm(e) {
             e.preventDefault();
             const employeeId = document.getElementById('s6EmployeeId').value.trim();
+            const employeeName = document.getElementById('s6EmployeeName').value.trim();
             const employeeNameEl = document.getElementById('s6EmployeeName');
             if (!employeeId) {
                 alert('请输入工号');
@@ -927,6 +1248,7 @@ A002,李四,1,1,0"></textarea>
                 });
                 const searchData = await searchRes.json();
                 if (searchData.code !== 0 || !searchData.data || searchData.data.length === 0) {
+                    logAction(`添加6S权限失败：员工不存在`, 'fail');
                     alert('员工不存在');
                     return;
                 }
@@ -935,10 +1257,12 @@ A002,李四,1,1,0"></textarea>
 
                 // 显示匹配的姓名
                 employeeNameEl.value = staff.name || '';
+                const actualName = staff.name || employeeId;
 
                 const staffId = staff.id;
 
                 if (allS6Staff.find(s => s.id === staffId && s.has_perm == 1)) {
+                    logAction(`添加6S权限失败：${actualName}已有权限`, 'fail');
                     alert('该员工已有6S权限');
                     return;
                 }
@@ -951,13 +1275,16 @@ A002,李四,1,1,0"></textarea>
                 });
                 const data = await res.json();
                 if (data.code === 0) {
+                    logAction(`添加6S权限：${actualName}(${employeeId})`);
                     alert('添加成功');
                     closeS6Modal();
                     loadS6Perms();
                 } else {
+                    logAction(data.msg || '添加失败', 'fail');
                     alert(data.msg || '添加失败');
                 }
             } catch (err) {
+                logAction('网络错误', 'fail');
                 console.error('添加6S权限失败:', err);
                 alert('添加失败');
             }
@@ -965,6 +1292,8 @@ A002,李四,1,1,0"></textarea>
 
         async function deleteS6Perm(staffId) {
             if (!confirm('确定删除该员工的6S权限？')) return;
+            const staff = allS6Staff.find(s => s.id === staffId);
+            const staffName = staff?.name || staff?.employee_id || staffId;
             try {
                 // Get all staff IDs except the one to delete
                 const currentIds = allS6Staff.filter(s => s.has_perm == 1).map(s => s.id);
@@ -976,12 +1305,15 @@ A002,李四,1,1,0"></textarea>
                 });
                 const data = await res.json();
                 if (data.code === 0) {
+                    logAction(`删除6S权限：${staffName}`);
                     alert('删除成功');
                     loadS6Perms();
                 } else {
+                    logAction(`删除6S权限失败：${data.msg || staffName}`, 'fail');
                     alert(data.msg || '删除失败');
                 }
             } catch (err) {
+                logAction(`删除6S权限失败：网络错误`, 'fail');
                 alert('删除失败');
             }
         }
@@ -1039,12 +1371,16 @@ A002,李四,1,1,0"></textarea>
             };
 
             try {
-                await fetch(`${API_URL}/permissions/files/public`, {
+                const res = await fetch(`${API_URL}/permissions/files/public`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ permissions: [perm] })
                 });
-            } catch (err) { console.error('更新文件权限失败:', err); }
+                const data = await res.json();
+                if (data.code !== 0) {
+                    logAction('更新公共文件权限失败', 'fail');
+                }
+            } catch (err) { logAction('网络错误', 'fail'); console.error('更新文件权限失败:', err); }
         }
 
         async function loadFilePersonalPerms() {
@@ -1098,12 +1434,16 @@ A002,李四,1,1,0"></textarea>
             };
 
             try {
-                await fetch(`${API_URL}/permissions/files/personal`, {
+                const res = await fetch(`${API_URL}/permissions/files/personal`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ permissions: [perm] })
                 });
-            } catch (err) { console.error('更新文件个人权限失败:', err); }
+                const data = await res.json();
+                if (data.code !== 0) {
+                    logAction('更新个人文件权限失败', 'fail');
+                }
+            } catch (err) { logAction('网络错误', 'fail'); console.error('更新文件权限失败:', err); }
         }
 
         // ============ 文件权限批量导入 ============
@@ -1136,6 +1476,7 @@ A002,李四,1,1,0"></textarea>
                 }
             }
             if (permissions.length === 0) {
+                logAction('批量导入公共文件权限失败：没有有效数据', 'fail');
                 document.getElementById('filePublicImportResult').className = 'import-result error';
                 document.getElementById('filePublicImportResult').textContent = '没有有效数据';
                 return;
@@ -1152,9 +1493,12 @@ A002,李四,1,1,0"></textarea>
                     let msg = `成功 ${d.success} 条`;
                     if (d.fail > 0) {
                         msg += `，失败 ${d.fail} 条`;
+                        logAction(`批量导入公共文件权限：${msg}`, 'fail');
                         if (d.errors && d.errors.length > 0) {
                             msg += `\n错误列表：\n` + d.errors.map(e => `${e.employee_id || '(空)'}${e.name ? '(' + e.name + ')' : ''}: ${e.error}`).join('\n');
                         }
+                    } else {
+                        logAction(`批量导入公共文件权限：成功 ${d.success} 条`);
                     }
                     document.getElementById('filePublicImportResult').className = d.fail > 0 ? 'import-result error' : 'import-result success';
                     document.getElementById('filePublicImportResult').textContent = msg;
@@ -1162,10 +1506,12 @@ A002,李四,1,1,0"></textarea>
                         setTimeout(() => { closeFilePublicImportModal(); loadFilePublicPerms(); }, 1500);
                     }
                 } else {
+                    logAction(`批量导入公共文件权限失败：${resData.msg || ''}`, 'fail');
                     document.getElementById('filePublicImportResult').className = 'import-result error';
                     document.getElementById('filePublicImportResult').textContent = resData.msg || '导入失败';
                 }
             } catch (err) {
+                logAction('批量导入公共文件权限失败：网络错误', 'fail');
                 document.getElementById('filePublicImportResult').className = 'import-result error';
                 document.getElementById('filePublicImportResult').textContent = '导入失败';
             }
@@ -1200,6 +1546,7 @@ A002,李四,1,1,0"></textarea>
                 }
             }
             if (permissions.length === 0) {
+                logAction('批量导入个人文件权限失败：没有有效数据', 'fail');
                 document.getElementById('filePersonalImportResult').className = 'import-result error';
                 document.getElementById('filePersonalImportResult').textContent = '没有有效数据';
                 return;
@@ -1216,9 +1563,12 @@ A002,李四,1,1,0"></textarea>
                     let msg = `成功 ${d.success} 条`;
                     if (d.fail > 0) {
                         msg += `，失败 ${d.fail} 条`;
+                        logAction(`批量导入个人文件权限：${msg}`, 'fail');
                         if (d.errors && d.errors.length > 0) {
                             msg += `\n错误列表：\n` + d.errors.map(e => `${e.employee_id || '(空)'}${e.name ? '(' + e.name + ')' : ''}: ${e.error}`).join('\n');
                         }
+                    } else {
+                        logAction(`批量导入个人文件权限：成功 ${d.success} 条`);
                     }
                     document.getElementById('filePersonalImportResult').className = d.fail > 0 ? 'import-result error' : 'import-result success';
                     document.getElementById('filePersonalImportResult').textContent = msg;
@@ -1226,10 +1576,12 @@ A002,李四,1,1,0"></textarea>
                         setTimeout(() => { closeFilePersonalImportModal(); loadFilePersonalPerms(); }, 1500);
                     }
                 } else {
+                    logAction(`批量导入个人文件权限失败：${resData.msg || ''}`, 'fail');
                     document.getElementById('filePersonalImportResult').className = 'import-result error';
                     document.getElementById('filePersonalImportResult').textContent = resData.msg || '导入失败';
                 }
             } catch (err) {
+                logAction('批量导入个人文件权限失败：网络错误', 'fail');
                 document.getElementById('filePersonalImportResult').className = 'import-result error';
                 document.getElementById('filePersonalImportResult').textContent = '导入失败';
             }

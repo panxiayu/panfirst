@@ -38,25 +38,25 @@ async function initAdmin() {
   console.log('container found');
 
   // 3. 加载数据
-  let papers = [];
+  let banks = [];
   try {
-    const res = await api.getPaperList();
-    console.log('getPaperList response:', res);
+    const res = await api.getQuestionBanks();
+    console.log('getQuestionBanks response:', res);
     if (res.code === 0) {
-      papers = res.data || [];
+      banks = res.data || [];
     } else {
-      throw new Error(res.msg || '获取试卷列表失败');
+      throw new Error(res.msg || '获取题库列表失败');
     }
   } catch (err) {
-    console.error('load papers error:', err);
-    showToast('加载试卷失败，请刷新重试');
+    console.error('load banks error:', err);
+    showToast('加载题库失败，请刷新重试');
     return;
   }
-  console.log('papers:', papers);
+  console.log('banks:', banks);
 
-  // 4. 渲染试卷列表
+  // 4. 渲染题库列表
   try {
-    renderPapers(container, papers);
+    renderPapers(container, banks);
     console.log('renderPapers success');
   } catch (err) {
     console.error('render error:', err);
@@ -64,15 +64,15 @@ async function initAdmin() {
   }
 
   // 5. 绑定事件
-  setupEvents(container, papers);
+  setupEvents(container, banks);
 }
 
-function renderPapers(container, papers) {
-  if (papers.length === 0) {
+function renderPapers(container, banks) {
+  if (banks.length === 0) {
     container.innerHTML = `
       <div class="section">
         <div class="text-center" style="padding:40px;color:#999;">
-          暂无试卷，请先导入题目
+          暂无题库，请先导入题目
         </div>
       </div>
     `;
@@ -81,42 +81,38 @@ function renderPapers(container, papers) {
 
   const html = `
     <div class="section">
-      <h2 class="section-title">📚 试卷管理</h2>
+      <h2 class="section-title">📚 题库管理</h2>
 
       <div style="margin-bottom: 20px;">
-        <button id="showImportBtn" class="btn btn-primary btn-small">导入新试卷</button>
+        <button id="showImportBtn" class="btn btn-primary btn-small">导入新题库</button>
       </div>
 
       <div class="paper-list" id="paperList">
-        ${papers.map(p => `
-          <div class="paper-card" data-paper-id="${p.id}">
+        ${banks.map(b => `
+          <div class="paper-card" data-paper-id="${b.id}">
             <div class="paper-card-header">
-              <h3>${p.title || `试卷 ${p.id}`}</h3>
-              <span class="paper-status ${p.is_active ? 'active' : 'inactive'}">
-                ${p.is_active ? '已发布' : '未发布'}
+              <h3>${b.title || `题库 ${b.id}`}</h3>
+              <span class="paper-status ${b.is_active ? 'active' : 'inactive'}">
+                ${b.is_active ? '已启用' : '未启用'}
               </span>
             </div>
             <div class="paper-card-body">
               <div class="paper-stat">
                 <span class="stat-label">题目数量</span>
-                <span class="stat-value">${p.question_count || 0} 题</span>
+                <span class="stat-value">${b.question_count || 0} 题</span>
               </div>
               <div class="paper-stat">
-                <span class="stat-label">试卷总分</span>
-                <span class="stat-value">${p.total_score || 0} 分</span>
-              </div>
-              <div class="paper-stat">
-                <span class="stat-label">答题人数</span>
-                <span class="stat-value">${p.recordCount || 0} 人</span>
+                <span class="stat-label">总分</span>
+                <span class="stat-value">${b.total_score || 0} 分</span>
               </div>
               <div class="paper-stat">
                 <span class="stat-label">创建时间</span>
-                <span class="stat-value">${formatDate(p.created_at)}</span>
+                <span class="stat-value">${formatDate(b.created_at)}</span>
               </div>
             </div>
             <div class="paper-card-actions">
-              <button class="btn btn-secondary btn-small view-detail-btn" data-paper-id="${p.id}">
-                查看详细答题
+              <button class="btn btn-danger btn-small delete-bank-btn" data-paper-id="${b.id}">
+                删除
               </button>
             </div>
           </div>
@@ -125,7 +121,7 @@ function renderPapers(container, papers) {
     </div>
 
     <div class="section" id="importSection" style="display:none;">
-      <h2 class="section-title">📥 导入试卷</h2>
+      <h2 class="section-title">📥 导入题库</h2>
 
       <div style="margin-bottom: 20px;">
         <label style="font-weight:600;margin-bottom:8px;display:block;">方式一：粘贴题目文本</label>
@@ -147,8 +143,8 @@ D. 选项D
       </div>
 
       <div style="margin:15px 0;">
-        <label style="font-weight:600;margin-bottom:8px;display:block;">试卷标题</label>
-        <input type="text" id="paperTitle" class="form-control" placeholder="例如：第三套试卷">
+        <label style="font-weight:600;margin-bottom:8px;display:block;">题库标题</label>
+        <input type="text" id="paperTitle" class="form-control" placeholder="例如：第三套题库">
       </div>
 
       <div style="display:flex;gap:10px;margin-bottom:15px;">
@@ -181,7 +177,7 @@ D. 选项D
   container.innerHTML = html;
 }
 
-function setupEvents(container, papers) {
+function setupEvents(container, banks) {
   // 显示导入区域
   const showImportBtn = container.querySelector('#showImportBtn');
   const importSection = container.querySelector('#importSection');
@@ -202,11 +198,22 @@ function setupEvents(container, papers) {
     });
   }
 
-  // 查看详情
-  container.querySelectorAll('.view-detail-btn').forEach(btn => {
+  // 删除题库
+  container.querySelectorAll('.delete-bank-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
-      const paperId = e.target.dataset.paperId;
-      await viewPaperDetail(paperId);
+      const bankId = e.target.dataset.paperId;
+      if (!confirm('确定要删除此题库吗？')) return;
+      try {
+        const res = await api.deleteQuestionBank(bankId);
+        if (res.code === 0) {
+          showToast('删除成功');
+          initAdmin();
+        } else {
+          showToast(res.msg || '删除失败');
+        }
+      } catch (err) {
+        showToast(err.message || '删除失败');
+      }
     });
   });
 
@@ -217,7 +224,7 @@ function setupEvents(container, papers) {
   setupPreview(container);
 
   // 导入题目
-  setupImport(container, papers);
+  setupImport(container, banks);
 }
 
 function setupFileUpload(container) {
@@ -345,7 +352,7 @@ function setupImport(container, papers) {
         container.querySelector('#paperTitle').value = '';
 
         // 刷新列表
-        const newRes = await api.getPaperList();
+        const newRes = await api.getQuestionBanks();
         if (newRes.code === 0) {
           renderPapers(container, newRes.data);
           setupEvents(container, newRes.data);
@@ -359,188 +366,23 @@ function setupImport(container, papers) {
   });
 }
 
+// 答题详情功能已移除 - 题库管理不再包含此功能
 async function viewPaperDetail(paperId) {
-  const container = document.getElementById('mainContent');
-  if (!container) return;
-
-  try {
-    const res = await api.getPaperDetail(paperId);
-    if (res.code !== 0) {
-      showToast(res.msg || '加载失败');
-      return;
-    }
-    renderPaperDetail(container, res.data);
-  } catch (err) {
-    showToast(err.message || '加载失败');
-  }
+  showToast('答题详情功能已移至培训管理');
 }
 
 function renderPaperDetail(container, data) {
-  const exam = data.exam;
-  const records = data.records;
-
-  container.innerHTML = `
-    <div class="section">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h2 class="section-title" style="margin:0;">
-          📝 ${exam.title || `试卷 ${exam.id}`} - 答题详情
-        </h2>
-        <div>
-          <button id="backToPapers" class="btn btn-secondary btn-small">← 返回</button>
-          <button id="exportDetailBtn" class="btn btn-primary btn-small">打印成绩</button>
-        </div>
-      </div>
-
-      <div class="alert alert-info">
-        总分：${exam.total_score || 0} 分 | 及格：${exam.pass_score || 60} 分 | 
-        题数：${data.questions.length} 题 | 人数：${records.length} 人
-      </div>
-
-      <div class="records-detail-list">
-        ${records.map(r => `
-          <div class="record-detail-item">
-            <div class="record-detail-header">
-              <div class="record-detail-name">
-                <span class="name">${r.nickname || '未命名'}</span>
-                <span class="openid">${r.openid.substring(0,15)}</span>
-              </div>
-              <div class="record-detail-score">
-                <span class="score ${r.totalScore >= exam.pass_score ? 'pass' : 'fail'}">
-                  ${r.totalScore} 分
-                </span>
-                <span class="status">${r.isPassed ? '及格' : '不及格'}</span>
-              </div>
-            </div>
-            <div class="record-detail-answers">
-              ${r.detailedAnswers.map((ans, idx) => `
-                <div class="answer-item ${ans.isCorrect ? 'correct' : 'wrong'}">
-                  <div class="question-preview">
-                    <strong>第${idx + 1}题：</strong>${ans.questionContent.substring(0, 80)}...
-                  </div>
-                  <div class="answer-detail">
-                    <span class="answer-user">你的答案：${formatAnswer(ans.userAnswer, ans.questionType)}</span>
-                    <span class="answer-correct">正确答案：${formatAnswer(ans.correctAnswer, ans.questionType)}</span>
-                    <span class="answer-score">${ans.isCorrect ? '+' + ans.score : '0'}分</span>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-            <div class="record-detail-time">
-              提交时间：${formatDateTime(r.submittedAt)}
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
-
-  // 绑定返回按钮
-  const backBtn = container.querySelector('#backToPapers');
-  if (backBtn) {
-    backBtn.addEventListener('click', () => initAdmin());
-  }
-
-  // 打印按钮
-  const exportBtn = container.querySelector('#exportDetailBtn');
-  if (exportBtn) {
-    exportBtn.addEventListener('click', () => generateDetailPrintPage(data));
-  }
+  // 已移除
 }
 
 function generateDetailPrintPage(data) {
-  const exam = data.exam;
-  const records = data.records;
-  const printDate = new Date().toLocaleString();
-
-  const printContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>${exam.title} - 答题详情</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    h1 { text-align: center; margin-bottom: 10px; }
-    .info { text-align: center; color: #666; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; page-break-inside: auto; }
-    thead { display: table-header-group; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-    th { background: #f5f5f5; font-weight: bold; }
-    tr { page-break-inside: avoid; page-break-after: auto; }
-    .pass { color: #07c160; }
-    .fail { color: #ff6b6b; }
-    .correct { background-color: #e8f5e9; }
-    .wrong { background-color: #ffebee; }
-    @media print { body { padding: 0; } }
-  </style>
-</head>
-<body>
-  <h1>${exam.title}</h1>
-  <div class="info">
-    打印时间：${printDate}<br>
-    总分：${exam.total_score || 0} 分 | 及格：${exam.pass_score || 60} 分<br>
-    人数：${records.length} 人
-  </div>
-  ${records.map((r, idx) => `
-    <div class="student-record">
-      <h3 style="margin:15px 0 5px;">
-        姓名：${r.nickname || '未命名'} | 
-        总分：<span class="${r.totalScore >= exam.pass_score ? 'pass' : 'fail'}">${r.totalScore}</span> 分 |
-        状态：${r.isPassed ? '及格' : '不及格'}
-      </h3>
-      <table>
-        <thead>
-          <tr>
-            <th style="width:50px;">题号</th>
-            <th>题目</th>
-            <th style="width:80px;">你的答案</th>
-            <th style="width:80px;">正确答案</th>
-            <th style="width:50px;">得分</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${r.detailedAnswers.map((ans, qIdx) => `
-            <tr class="${ans.isCorrect ? 'correct' : 'wrong'}">
-              <td>${qIdx + 1}</td>
-              <td>${ans.questionContent}</td>
-              <td>${formatAnswer(ans.userAnswer, ans.questionType)}</td>
-              <td>${formatAnswer(ans.correctAnswer, ans.questionType)}</td>
-              <td class="${ans.isCorrect ? 'pass' : 'fail'}">${ans.isCorrect ? '+' + ans.score : '0'}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-      ${idx < records.length - 1 ? '<div style="page-break-after: always;"></div>' : ''}
-    </div>
-  `).join('')}
-  <script>window.onload = () => setTimeout(() => window.print(), 500);</script>
-</body>
-</html>
-  `;
-
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write(printContent);
-  printWindow.document.close();
-}
-
-function formatAnswer(answer, type) {
-  if (!answer) return '未作答';
-  if (type === 'multiple_choice') {
-    return answer.split(',').join('、');
-  }
-  return answer;
+  // 已移除
 }
 
 function formatDate(isoString) {
   if (!isoString) return '-';
   const d = new Date(isoString);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-function formatDateTime(isoString) {
-  if (!isoString) return '-';
-  const d = new Date(isoString);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
 // 启动

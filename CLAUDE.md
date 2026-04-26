@@ -101,9 +101,10 @@ dashboard.html（仪表板）
 |----------|-----------|
 | `src/routes/auth.js` | 登录、登出、Token刷新、员工登录、权限查询 |
 | `src/routes/staff.js` | 员工 CRUD、批量导入、SMB同步、列配置 |
-| `src/routes/learning-task.js` | 学习任务 CRUD、进度管理 |
+| `src/routes/learning-material.js` | 学习资料 CRUD、进度管理 |
 | `src/routes/exam.js` | 考试答题（学生端） |
-| `src/routes/exam-admin.js` | 试卷/题目 CRUD、成绩统计（管理端） |
+| `src/routes/exam-trainings.js` | 培训管理（创建/编辑/删除/启用停用） |
+| `src/routes/question-banks.js` | 题库管理、exam_trainings 表初始化 |
 | `src/routes/meal.js` | 报餐 CRUD、订单 |
 | `src/routes/voting.js` | 投票 CRUD、投票 |
 | `src/routes/file-manager.js` | 文件上传、下载、删除 |
@@ -168,6 +169,18 @@ CREATE TABLE IF NOT EXISTS six_s_records (
 ---
 
 ## 开发进度
+
+### 2026-04-26 完成
+
+**培训管理系统修复**
+- exam-trainings.js：修复确认启用报错（PUT API 要求 title 必须存在）
+- exam-trainings.js：添加 start_time/end_time 字段支持
+- question-banks.js：exam_trainings 表添加 start_time/end_time 列迁移
+- exam.js：修复 previewPaper 解构 `{ training: exam, questions }`
+- exam.js：修复 openExamSettings 使用 `question_bank_id`
+- exam.js：修复 showTrainingRecordDetail 解构 `users` 而非 `usersWithProgress`
+- exam.js：修复 deleteQuestionBank/deleteTask 显示关联培训信息
+- exam.js：修复 stats/user API 返回值 `.summary` 访问
 
 ### 2026-04-21 完成
 
@@ -277,4 +290,4 @@ CREATE TABLE IF NOT EXISTS six_s_records (
 
 ---
 
-> 最后更新：2026-04-21
+> 最后更新：2026-04-26

@@ -64,16 +64,17 @@ router.get('/list', authMiddleware, examPermissionMiddleware, (req, res) => {
   try {
     const userId = getUserId(req);
 
-    // 获取已激活的考试
-    const exams = db.prepare(`
-      SELECT e.*,
-        COUNT(q.id) as question_count,
-        COALESCE(SUM(q.score), 0) as total_score
-      FROM exams e
-      LEFT JOIN questions q ON e.id = q.exam_id
-      WHERE e.is_active = 1
-      GROUP BY e.id
-      ORDER BY e.created_at DESC
+    // 获取已激活的培训（从 exam_trainings 表）
+    const trainings = db.prepare(`
+      SELECT et.*,
+        (SELECT COUNT(*) FROM questions WHERE exam_id = et.question_bank_id) as question_count,
+        (SELECT COALESCE(SUM(score), 0) FROM questions WHERE exam_id = et.question_bank_id) as total_score,
+        lt.title as learning_task_title,
+        lt.end_time as learning_task_end_time
+      FROM exam_trainings et
+      LEFT JOIN learning_tasks lt ON et.learning_task_id = lt.id
+      WHERE et.is_active = 1
+      ORDER BY et.created_at DESC
     `).all();
 
     // 获取用户已完成的考试记录
@@ -90,18 +91,17 @@ router.get('/list', authMiddleware, examPermissionMiddleware, (req, res) => {
     });
 
     const now = new Date();
-    const formattedExams = exams.map(exam => {
+    const formattedExams = trainings.map(exam => {
       let isAvailable = true;
       let unavailableReason = '';
 
       // 检查学习任务是否过期
       if (exam.learning_task_id) {
-        const task = db.prepare('SELECT * FROM learning_tasks WHERE id = ?').get(exam.learning_task_id);
-        if (!task) {
+        if (!exam.learning_task_title) {
           isAvailable = false;
           unavailableReason = '学习任务不存在';
-        } else if (task.end_time) {
-          const endTime = new Date(task.end_time);
+        } else if (exam.learning_task_end_time) {
+          const endTime = new Date(exam.learning_task_end_time);
           if (now > endTime) {
             isAvailable = false;
             unavailableReason = '学习任务已到期';
@@ -123,6 +123,7 @@ router.get('/list', authMiddleware, examPermissionMiddleware, (req, res) => {
         is_passed: completedMap[exam.id]?.is_passed,
         last_submit_at: completedMap[exam.id]?.last_submit_at,
         learning_task_id: exam.learning_task_id,
+        question_bank_id: exam.question_bank_id,
         is_available: isAvailable,
         unavailable_reason: unavailableReason
       };
@@ -138,20 +139,23 @@ router.get('/list', authMiddleware, examPermissionMiddleware, (req, res) => {
 // GET /api/exam/:id - 获取考试详情
 router.get('/:id', authMiddleware, examPermissionMiddleware, (req, res) => {
   try {
-    const examId = req.params.id;
-    const exam = db.prepare('SELECT * FROM exams WHERE id = ? AND is_active = 1').get(examId);
+    const trainingId = req.params.id;
+
+    // 从 exam_trainings 获取培训信息
+    const exam = db.prepare('SELECT * FROM exam_trainings WHERE id = ? AND is_active = 1').get(trainingId);
 
     if (!exam) {
       return res.status(404).json({ code: -1, msg: '考试不存在或未激活', data: null });
     }
 
-    // 如果有 source_exam_id，从源考试获取题目（复用题库）
-    const actualExamId = exam.source_exam_id || examId;
-
-    const questions = db.prepare(`
-      SELECT id, type, content, options, score, sort_order
-      FROM questions WHERE exam_id = ? ORDER BY sort_order ASC, id ASC
-    `).all(actualExamId);
+    // 从关联的 exam_banks 获取题目（使用 question_bank_id 作为 exam_id）
+    let questions = [];
+    if (exam.question_bank_id) {
+      questions = db.prepare(`
+        SELECT id, type, content, options, score, sort_order
+        FROM questions WHERE exam_id = ? ORDER BY sort_order ASC, id ASC
+      `).all(exam.question_bank_id);
+    }
 
     const formattedQuestions = questions.map(q => ({
       _id: q.id.toString(),
@@ -180,7 +184,8 @@ router.post('/start', authMiddleware, examPermissionMiddleware, (req, res) => {
       return res.status(400).json({ code: -1, msg: '缺少 examId', data: null });
     }
 
-    const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(examId);
+    // 从 exam_trainings 获取培训信息
+    const exam = db.prepare('SELECT * FROM exam_trainings WHERE id = ?').get(examId);
     if (!exam) {
       return res.status(404).json({ code: -1, msg: '考试不存在', data: null });
     }
@@ -298,8 +303,15 @@ router.post('/submit', authMiddleware, examPermissionMiddleware, (req, res) => {
     }
 
     const examId = record.exam_id;
-    // 如果有 source_exam_id，从源考试获取题目（复用题库）
-    const actualExamId = record.source_exam_id || examId;
+
+    // 从 exam_trainings 获取关联的 question_bank_id
+    const training = db.prepare('SELECT * FROM exam_trainings WHERE id = ?').get(examId);
+    if (!training) {
+      return res.status(400).json({ code: -1, msg: '考试不存在', data: null });
+    }
+
+    // 题目存储在 exam_banks 中，通过 question_bank_id 关联
+    const actualExamId = training.question_bank_id || examId;
     const questions = db.prepare('SELECT * FROM questions WHERE exam_id = ?').all(actualExamId);
 
     if (questions.length === 0) {
@@ -330,8 +342,7 @@ router.post('/submit', authMiddleware, examPermissionMiddleware, (req, res) => {
       }
     }
 
-    const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(examId);
-    const isPassed = totalScore >= (exam.pass_score || 60);
+    const isPassed = totalScore >= (training.pass_score || 60);
 
     db.prepare(`
       UPDATE exam_records
@@ -347,7 +358,7 @@ router.post('/submit', authMiddleware, examPermissionMiddleware, (req, res) => {
         correctCount,
         totalQuestions: questions.length,
         isPassed,
-        passScore: exam.pass_score
+        passScore: training.pass_score
       }
     });
   } catch (err) {
@@ -394,9 +405,9 @@ router.get('/stats/user', authMiddleware, examPermissionMiddleware, (req, res) =
     `).get(userId);
 
     const recentRecords = db.prepare(`
-      SELECT er.*, e.title as exam_title, e.duration, e.pass_score
+      SELECT er.*, et.title as exam_title, et.duration, et.pass_score
       FROM exam_records er
-      JOIN exams e ON er.exam_id = e.id
+      JOIN exam_trainings et ON er.exam_id = et.id
       WHERE er.${idField} = ? AND er.submitted_at IS NOT NULL
       ORDER BY er.submitted_at DESC LIMIT 10
     `).all(userId);
@@ -432,17 +443,17 @@ router.get('/my-records', authMiddleware, examPermissionMiddleware, (req, res) =
     let records;
     if (isEmployee) {
       records = db.prepare(`
-        SELECT er.*, e.title as exam_title, e.duration, e.pass_score
+        SELECT er.*, et.title as exam_title, et.duration, et.pass_score
         FROM exam_records er
-        JOIN exams e ON er.exam_id = e.id
+        JOIN exam_trainings et ON er.exam_id = et.id
         WHERE er.staff_id = ? AND er.submitted_at IS NOT NULL
         ORDER BY er.submitted_at DESC
       `).all(staffId);
     } else {
       records = db.prepare(`
-        SELECT er.*, e.title as exam_title, e.duration, e.pass_score
+        SELECT er.*, et.title as exam_title, et.duration, et.pass_score
         FROM exam_records er
-        JOIN exams e ON er.exam_id = e.id
+        JOIN exam_trainings et ON er.exam_id = et.id
         WHERE er.user_id = ? AND er.submitted_at IS NOT NULL
         ORDER BY er.submitted_at DESC
       `).all(userId);

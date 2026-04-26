@@ -22,6 +22,32 @@
 
         /* 页面特定样式 - 仅覆盖需要定制的部分 */
 
+        :root {
+            --bg: #F0F7FF;
+            --card: #ffffff;
+            --border: #D6E9FF;
+            --primary: #4A90E2;
+            --secondary: #65B3FF;
+            --accent: #22C58D;
+            --text: #1D2B5A;
+            --text-soft: #5B72A9;
+            --radius: 22px;
+            --transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+            --shadow: 0 8px 24px rgba(74, 144, 226, 0.12);
+            --shadow-hover: 0 16px 40px rgba(74, 144, 226, 0.18);
+        }
+
+        /* 序列入场动画 */
+        .fade-item {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: var(--transition);
+        }
+        .fade-in {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+
         html, body {
             height: 100%;
             margin: 0;
@@ -33,8 +59,8 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
-            background: var(--mobile-bg-page);
-            color: var(--mobile-text-primary);
+            background: var(--bg);
+            color: var(--text);
             font-size: 15px;
             line-height: 1.5;
             margin: 0;
@@ -51,7 +77,7 @@
             width: 100%;
             max-width: 480px;
             min-height: 100vh;
-            background: var(--mobile-bg-page);
+            background: var(--bg);
             margin: 0 auto;
             padding: 20px 16px 100px;
             box-sizing: border-box;
@@ -60,28 +86,31 @@
         .page-title {
             font-size: 28px;
             font-weight: 700;
-            color: var(--mobile-text-primary);
+            color: var(--text);
             letter-spacing: -0.5px;
             margin-bottom: 4px;
         }
 
         .page-subtitle {
             font-size: 14px;
-            color: var(--mobile-text-secondary);
+            color: var(--text-soft);
         }
 
         /* 卡片容器 */
         .card {
-            background: var(--mobile-bg-card);
-            border-radius: var(--mobile-radius-xl);
-            box-shadow: var(--mobile-shadow-md);
+            background: var(--card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
             overflow: hidden;
-            transition: box-shadow var(--mobile-transition-normal), transform var(--mobile-transition-normal);
+            transition: var(--transition);
             margin-bottom: 16px;
         }
 
         .card:hover {
-            box-shadow: var(--mobile-shadow-lg);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--primary);
         }
 
         .card:active {
@@ -93,16 +122,6 @@
             padding: 20px;
             margin-bottom: 20px;
             position: relative;
-        }
-
-        .today-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: #fff;
         }
 
         .today-header {
@@ -117,8 +136,8 @@
         .today-date {
             width: 64px;
             height: 64px;
-            background: linear-gradient(135deg, var(--mobile-primary), #FF9500);
-            border-radius: var(--radius-lg);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: var(--radius);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -126,7 +145,7 @@
             color: white;
             flex-shrink: 0;
             flex-grow: 0;
-            box-shadow: 0 4px 12px rgba(255,183,0,0.35);
+            box-shadow: 0 8px 20px rgba(74, 144, 226, 0.35);
             position: absolute;
             left: 0;
         }
@@ -222,21 +241,8 @@
             justify-content: center;
             font-size: 28px;
             flex-shrink: 0;
-        }
-
-        .quick-icon.blue {
-            background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
-            box-shadow: 0 4px 12px rgba(59,130,246,0.25);
-        }
-
-        .quick-icon.yellow {
-            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
-            box-shadow: 0 4px 12px rgba(251,191,36,0.25);
-        }
-
-        .quick-icon.green {
-            background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
-            box-shadow: 0 4px 12px rgba(16,185,129,0.25);
+            background: transparent;
+            box-shadow: none;
         }
 
         .quick-content {
@@ -247,72 +253,42 @@
         .quick-title {
             font-size: 17px;
             font-weight: 700;
-            color: var(--mobile-text-primary);
+            color: var(--text);
             margin-bottom: 4px;
         }
 
         .quick-desc {
             font-size: 13px;
-            color: var(--mobile-text-secondary);
+            color: var(--text-soft);
         }
 
         .quick-arrow {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: var(--mobile-bg-hover);
+            background: var(--bg);
+            border: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all var(--mobile-transition-fast);
+            transition: var(--transition);
             position: relative;
         }
         .quick-arrow::after {
             content: '';
             width: 8px;
             height: 8px;
-            border-top: 2px solid var(--mobile-text-tertiary);
-            border-right: 2px solid var(--mobile-text-tertiary);
+            border-top: 2px solid var(--text-soft);
+            border-right: 2px solid var(--text-soft);
             transform: rotate(45deg);
             margin-left: -2px;
         }
-        .quick-item:active .quick-arrow {
-            background: var(--mobile-primary-light);
+        .quick-item:hover .quick-arrow {
+            border-color: var(--primary);
             transform: translateX(4px);
         }
-        .quick-item:active .quick-arrow::after {
-            border-color: var(--mobile-primary);
-        }
-            border-radius: var(--mobile-radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            margin-bottom: 10px;
-        }
-
-        .quick-icon.yellow {
-            background: var(--mobile-primary-light);
-        }
-
-        .quick-icon.blue {
-            background: var(--mobile-secondary-light);
-        }
-
-        .quick-icon.green {
-            background: var(--mobile-success-light);
-        }
-
-        .quick-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--mobile-text-primary);
-            margin-bottom: 2px;
-        }
-
-        .quick-desc {
-            font-size: 12px;
-            color: var(--mobile-text-tertiary);
+        .quick-item:hover .quick-arrow::after {
+            border-color: var(--primary);
         }
 
         /* 餐类选择卡片 */
@@ -353,50 +329,55 @@
         .meal-card-title {
             font-size: 17px;
             font-weight: 700;
-            color: var(--mobile-text-primary);
+            color: var(--text);
             margin-bottom: 4px;
         }
 
         .meal-card-desc {
             font-size: 13px;
-            color: var(--mobile-text-secondary);
+            color: var(--text-soft);
         }
 
         .meal-card-arrow {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: var(--mobile-bg-hover);
+            background: var(--bg);
+            border: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all var(--mobile-transition-fast);
+            transition: var(--transition);
             position: relative;
         }
         .meal-card-arrow::after {
             content: '';
             width: 8px;
             height: 8px;
-            border-top: 2px solid var(--mobile-text-tertiary);
-            border-right: 2px solid var(--mobile-text-tertiary);
+            border-top: 2px solid var(--text-soft);
+            border-right: 2px solid var(--text-soft);
             transform: rotate(45deg);
             margin-left: -2px;
         }
-        .meal-card:active .meal-card-arrow {
-            background: var(--mobile-primary-light);
+        .meal-card:hover .meal-card-arrow {
+            border-color: var(--primary);
             transform: translateX(4px);
         }
-        .meal-card:active .meal-card-arrow::after {
-            border-color: var(--mobile-primary);
+        .meal-card:hover .meal-card-arrow::after {
+            border-color: var(--primary);
         }
 
         .meal-card-divider {
             height: 1px;
-            background: var(--mobile-border-light);
+            background: var(--border);
             margin: 0 20px;
         }
 
         .meal-record-divider {
+            height: 1px;
+            border-top: 1px dashed var(--border);
+            margin: 0;
+        }
             height: 1px;
             border-top: 1px dashed var(--mobile-border-medium);
             margin: 0;
@@ -1729,7 +1710,7 @@
 
                 <div class="card-container">
                     <div class="card quick-item animate__animated animate__fadeInUp animate__delay-1s" onclick="showRecords()">
-                        <div class="quick-icon blue">📝</div>
+                        <div class="quick-icon blue" style="background: transparent; box-shadow: none;"><img src="icons/icon-meal-log.svg" alt="" style="width: 80px; height: 80px;"></div>
                         <div class="quick-content">
                             <div class="quick-title" style="font-size:17px;font-weight:700;color:var(--mobile-text-primary)">报餐记录</div>
                             <div class="quick-desc">查看我的报餐记录</div>
@@ -2100,10 +2081,10 @@
             signupData = {
                 mealType: defaultMealType,
                 count: 1,
-                lunchCount: todayEmployeeLunch?.employee_count || 0,
-                dinnerCount: todayEmployeeDinner?.employee_count || 0,
-                hasLunchSignup,
-                hasDinnerSignup
+                lunchCount: 0,
+                dinnerCount: 0,
+                hasLunchSignup: false,
+                hasDinnerSignup: false
             };
             history.pushState({ page: 'employee' }, '', location.href);
             renderEmployeePage();
@@ -2521,9 +2502,14 @@
             const total = signupData.count;
             const mealType = signupData.mealType;
 
-            // 检查是否已报过该餐次
-            if ((mealType === 'lunch' && signupData.hasLunchSignup) ||
-                (mealType === 'dinner' && signupData.hasDinnerSignup)) {
+            // 检查是否已报过该餐次（从 currentActivity 读取最新状态）
+            const todayEmployeeLunch = currentActivity.todayEmployeeLunch;
+            const todayEmployeeDinner = currentActivity.todayEmployeeDinner;
+            const hasLunchSignup = todayEmployeeLunch?.employee_count > 0;
+            const hasDinnerSignup = todayEmployeeDinner?.employee_count > 0;
+
+            if ((mealType === 'lunch' && hasLunchSignup) ||
+                (mealType === 'dinner' && hasDinnerSignup)) {
                 showToast('该餐次已报餐，请滑动卡片取消后再试');
                 return;
             }
@@ -2536,8 +2522,8 @@
                 },
                 body: JSON.stringify({
                     date: formatDate(todayDate),
-                    lunch_employee: mealType === 'lunch' ? total : (signupData.lunchCount || 0),
-                    dinner_employee: mealType === 'dinner' ? total : (signupData.dinnerCount || 0)
+                    lunch_employee: mealType === 'lunch' ? total : 0,
+                    dinner_employee: mealType === 'dinner' ? total : 0
                 })
             })
             .then(res => res.json())

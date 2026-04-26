@@ -329,9 +329,9 @@ router.get('/:id', authMiddleware, (req, res) => {
 
     // 获取员工的考试成绩
     const examScores = db.prepare(`
-      SELECT er.id, e.title, er.score, er.status, er.created_at
+      SELECT er.id, et.title, er.score, er.status, er.created_at
       FROM exam_records er
-      JOIN exams e ON er.exam_id = e.id
+      JOIN exam_trainings et ON er.exam_id = et.id
       WHERE er.user_id = ?
       ORDER BY er.created_at DESC
       LIMIT 10

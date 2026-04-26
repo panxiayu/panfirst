@@ -10,7 +10,16 @@ const Joi = require('joi');
 const addAdminSchema = Joi.object({
   username: Joi.string().required().min(3).max(50),
   password: Joi.string().required().min(6).max(100),
-  nickname: Joi.string()
+  nickname: Joi.string(),
+  can_manage_voting: Joi.number().integer().min(0).max(1),
+  can_manage_exam: Joi.number().integer().min(0).max(1),
+  can_manage_meal: Joi.number().integer().min(0).max(1),
+  can_manage_staff: Joi.number().integer().min(0).max(1),
+  can_manage_task: Joi.number().integer().min(0).max(1),
+  can_manage_file: Joi.number().integer().min(0).max(1),
+  can_manage_training: Joi.number().integer().min(0).max(1),
+  can_manage_6s: Joi.number().integer().min(0).max(1),
+  can_manage_permission: Joi.number().integer().min(0).max(1)
 });
 
 const updateAdminSchema = Joi.object({
@@ -19,7 +28,10 @@ const updateAdminSchema = Joi.object({
   can_manage_meal: Joi.number().integer().min(0).max(1),
   can_manage_staff: Joi.number().integer().min(0).max(1),
   can_manage_task: Joi.number().integer().min(0).max(1),
-  can_manage_file: Joi.number().integer().min(0).max(1)
+  can_manage_file: Joi.number().integer().min(0).max(1),
+  can_manage_training: Joi.number().integer().min(0).max(1),
+  can_manage_6s: Joi.number().integer().min(0).max(1),
+  can_manage_permission: Joi.number().integer().min(0).max(1)
 });
 
 // ============ 中间件 ============
@@ -61,6 +73,60 @@ function authMiddleware(req, res, next) {
 // ============ API 端点 ============
 
 /**
+ * POST /api/admin/log
+ * 记录权限管理操作日志
+ */
+router.post('/log', authMiddleware, (req, res) => {
+  try {
+    const { tab, action, status } = req.body;
+    if (!tab || !action) {
+      return res.status(400).json({ code: -1, msg: '参数不完整', data: null });
+    }
+
+    db.prepare(`
+      INSERT INTO permission_action_logs (user_id, username, tab, action, status)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(req.user.userId, req.user.username, tab, action, status || 'success');
+
+    res.json({ code: 0, msg: 'success', data: null });
+  } catch (err) {
+    console.error('记录日志失败:', err);
+    res.status(500).json({ code: -1, msg: '服务器错误', data: null });
+  }
+});
+
+/**
+ * GET /api/admin/logs
+ * 获取权限管理操作日志
+ * Query: tab=管理员&user_id=1
+ */
+router.get('/logs', authMiddleware, (req, res) => {
+  try {
+    const { tab, user_id } = req.query;
+    let sql = `SELECT id, username, tab, action, status, created_at FROM permission_action_logs WHERE 1=1`;
+    const params = [];
+
+    if (tab) {
+      sql += ` AND tab = ?`;
+      params.push(tab);
+    }
+    if (user_id) {
+      sql += ` AND user_id = ?`;
+      params.push(parseInt(user_id));
+    }
+
+    sql += ` ORDER BY created_at DESC LIMIT 100`;
+
+    const logs = db.prepare(sql).all(...params);
+
+    res.json({ code: 0, msg: 'success', data: logs });
+  } catch (err) {
+    console.error('获取日志失败:', err);
+    res.status(500).json({ code: -1, msg: '服务器错误', data: null });
+  }
+});
+
+/**
  * GET /api/admin/list
  * 获取管理员列表
  */
@@ -69,7 +135,9 @@ router.get('/list', authMiddleware, (req, res) => {
     const admins = db.prepare(`
       SELECT id, username, email, nickname, role, status,
              can_manage_voting, can_manage_exam, can_manage_meal,
-             can_manage_staff, can_manage_task, created_at, updated_at
+             can_manage_staff, can_manage_task, can_manage_file,
+             can_manage_training, can_manage_6s, can_manage_permission,
+             created_at, updated_at
       FROM users
       WHERE role = 'admin'
       ORDER BY created_at DESC
@@ -105,7 +173,17 @@ router.post('/add', authMiddleware, (req, res) => {
       });
     }
 
-    const { username, password, nickname } = value;
+    const { username, password, nickname,
+      can_manage_voting = 0,
+      can_manage_exam = 0,
+      can_manage_meal = 0,
+      can_manage_staff = 0,
+      can_manage_task = 0,
+      can_manage_file = 0,
+      can_manage_training = 0,
+      can_manage_6s = 0,
+      can_manage_permission = 0
+    } = value;
 
     // 检查用户名是否已存在
     const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
@@ -120,19 +198,25 @@ router.post('/add', authMiddleware, (req, res) => {
     // 加密密码
     const hashedPassword = hashPassword(password);
 
-    // 插入管理员（默认无权限，需要后续配置）
+    // 插入管理员
     const result = db.prepare(`
       INSERT INTO users (username, password, nickname, role, status,
                         can_manage_voting, can_manage_exam, can_manage_meal,
-                        can_manage_staff, can_manage_task, can_manage_file)
-      VALUES (?, ?, ?, 'admin', 'active', 0, 0, 0, 0, 0, 0)
-    `).run(username, hashedPassword, nickname || username);
+                        can_manage_staff, can_manage_task, can_manage_file,
+                        can_manage_training, can_manage_6s, can_manage_permission)
+      VALUES (?, ?, ?, 'admin', 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(username, hashedPassword, nickname || username,
+      can_manage_voting, can_manage_exam, can_manage_meal,
+      can_manage_staff, can_manage_task, can_manage_file,
+      can_manage_training, can_manage_6s, can_manage_permission);
 
     // 获取新创建的管理员
     const newAdmin = db.prepare(`
       SELECT id, username, nickname, role, status,
              can_manage_voting, can_manage_exam, can_manage_meal,
-             can_manage_staff, can_manage_task, can_manage_file, created_at
+             can_manage_staff, can_manage_task, can_manage_file,
+             can_manage_training, can_manage_6s, can_manage_permission,
+             created_at
       FROM users WHERE id = ?
     `).get(result.lastInsertRowid);
 
@@ -210,9 +294,11 @@ router.put('/:id/update', authMiddleware, (req, res) => {
 
     // 获取更新后的管理员
     const updatedAdmin = db.prepare(`
-      SELECT id, username, email, nickname, role, status, 
-             can_manage_voting, can_manage_exam, can_manage_meal, 
-             can_manage_staff, can_manage_task, updated_at
+      SELECT id, username, email, nickname, role, status,
+             can_manage_voting, can_manage_exam, can_manage_meal,
+             can_manage_staff, can_manage_task, can_manage_file,
+             can_manage_training, can_manage_6s, can_manage_permission,
+             updated_at
       FROM users WHERE id = ?
     `).get(adminId);
 
@@ -235,7 +321,7 @@ router.put('/:id/update', authMiddleware, (req, res) => {
  * DELETE /api/admin/:id
  * 删除管理员
  */
-router.delete('/:id', authMiddleware, adminMiddleware, (req, res) => {
+router.delete('/:id', authMiddleware, (req, res) => {
   try {
     const adminId = parseInt(req.params.id);
     

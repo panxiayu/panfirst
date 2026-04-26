@@ -17,7 +17,8 @@ const settingsRoutes = require('./routes/settings');
 const templatesRoutes = require('./routes/templates');
 const adminRoutes = require('./routes/admin');
 const examRoutes = require('./routes/exam');
-const examAdminRoutes = require('./routes/exam-admin');
+const questionBanksRoutes = require('./routes/question-banks');
+const examTrainingsRoutes = require('./routes/exam-trainings');
 const permissionsRoutes = require('./routes/permissions');
 const sixSRoutes = require('./routes/6s');
 const homeworkTimerRoutes = require('./routes/homework-timer');
@@ -64,7 +65,8 @@ app.use('/api/admin', adminRoutes); // 管理员管理
 app.use('/api/admin/permissions', permissionsRoutes); // 权限管理
 app.use('/api/permissions', require('./routes/granular-permissions')); // 粒化权限管理
 app.use('/api/exam', examRoutes); // 考试相关 API
-app.use('/api/exam-admin', examAdminRoutes); // 考试管理后台 API
+app.use('/api/question-banks', questionBanksRoutes); // 题库管理
+app.use('/api/exam-trainings', examTrainingsRoutes); // 培训管理
 app.use('/api/import', uploadRoutes); // upload 路由
 app.use('/api/files', require('./routes/file-manager')); // 文件管理
 app.use('/api/6s', sixSRoutes); // 6S曝光管理

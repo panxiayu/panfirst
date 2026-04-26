@@ -15,6 +15,11 @@ try {
   db.prepare("ALTER TABLE learning_tasks ADD COLUMN description TEXT").run();
 } catch (e) {}
 
+// 初始化learning_tasks视频时长字段
+try {
+  db.prepare("ALTER TABLE learning_tasks ADD COLUMN duration INTEGER").run();
+} catch (e) {}
+
 // 迁移learning_tasks表，使file_type和file_url可以为NULL
 try {
   // 检查file_type是否为NOT NULL
@@ -134,18 +139,19 @@ router.get('/', authMiddleware, (req, res) => {
     const now = new Date();
 
     // 构建查询 - 根据是否有管理权限决定是否过滤
+    // 注意：使用子查询避免 LEFT JOIN exam_trainings 产生笛卡尔积
     let query = `
       SELECT lt.*,
         lp.status as progress_status,
         lp.progress_percent,
         lp.last_position,
         lp.last_access_time,
-        e.title as exam_title,
-        CASE WHEN ep.id IS NOT NULL THEN 1 ELSE 0 END as has_perm
+        (SELECT et.title FROM exam_trainings et WHERE et.learning_task_id = lt.id LIMIT 1) as exam_title,
+        (SELECT COUNT(*) FROM exam_permissions ep2
+         INNER JOIN exam_trainings et2 ON et2.id = ep2.exam_id AND et2.learning_task_id = lt.id
+         WHERE ep2.staff_id = ? AND ep2.can_take = 1 LIMIT 1) as has_perm
       FROM learning_tasks lt
       LEFT JOIN learning_progress lp ON lt.id = lp.task_id AND lp.staff_id = ?
-      LEFT JOIN exams e ON e.learning_task_id = lt.id
-      LEFT JOIN exam_permissions ep ON e.id = ep.exam_id AND ep.staff_id = ? AND ep.can_take = 1
       WHERE 1=1
     `;
     const params = [userId, userId];
@@ -249,7 +255,7 @@ router.get('/my-records', authMiddleware, (req, res) => {
         e.is_active as exam_is_active
       FROM learning_tasks lt
       LEFT JOIN learning_progress lp ON lt.id = lp.task_id AND lp.staff_id = ?
-      LEFT JOIN exams e ON e.learning_task_id = lt.id
+      LEFT JOIN exam_trainings e ON e.learning_task_id = lt.id
       ORDER BY lt.end_time DESC
     `).all(userId);
 
@@ -402,8 +408,8 @@ router.get('/:id', authMiddleware, (req, res) => {
 
     stats.not_started = stats.total - stats.in_progress - stats.completed;
 
-    // 获取关联的考试信息
-    const exam = db.prepare('SELECT id, title, duration, pass_score, is_active FROM exams WHERE learning_task_id = ?').get(id);
+    // 获取关联的培训信息
+    const exam = db.prepare('SELECT id, title, duration, pass_score, is_active FROM exam_trainings WHERE learning_task_id = ?').get(id);
 
     res.json({
       code: 0,
@@ -449,7 +455,8 @@ router.post('/', authMiddleware, (req, res) => {
       file_url: Joi.string().optional(),
       start_time: Joi.date().optional(),
       end_time: Joi.date().optional(),
-      description: Joi.string().allow('').optional()
+      description: Joi.string().allow('').optional(),
+      duration: Joi.number().integer().optional()
     });
 
     const { error, value } = schema.validate(req.body);
@@ -461,7 +468,13 @@ router.post('/', authMiddleware, (req, res) => {
       });
     }
 
-    const { title, description, file_type, file_url, start_time, end_time } = value;
+    const { title, description, file_type, file_url, start_time, end_time, duration } = value;
+
+    // 检查标题是否已存在
+    const existingTask = db.prepare('SELECT id FROM learning_tasks WHERE title = ?').get(title.trim());
+    if (existingTask) {
+      return res.status(400).json({ code: -1, msg: '学习资料标题已存在', data: null });
+    }
 
     // 处理时区问题:前端发送的是北京时间 (UTC+8)
     // datetime-local 输入格式: 2026-03-27T20:00 (本地时间)
@@ -476,8 +489,8 @@ router.post('/', authMiddleware, (req, res) => {
 
     // 创建任务
     const stmt = db.prepare(`
-      INSERT INTO learning_tasks (title, description, file_type, file_url, start_time, end_time, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO learning_tasks (title, description, file_type, file_url, start_time, end_time, created_by, duration)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
@@ -487,7 +500,8 @@ router.post('/', authMiddleware, (req, res) => {
       file_url || null,
       convertLocalToUTC(start_time),
       convertLocalToUTC(end_time),
-      req.user.userId
+      req.user.userId,
+      duration || null
     );
 
     const taskId = result.lastInsertRowid;
@@ -498,10 +512,12 @@ router.post('/', authMiddleware, (req, res) => {
       data: {
         id: taskId,
         title,
+        description,
         file_type,
         file_url,
         start_time: convertLocalToUTC(start_time),
-        end_time: convertLocalToUTC(end_time)
+        end_time: convertLocalToUTC(end_time),
+        duration: duration || null
       }
     });
   } catch (err) {
@@ -579,17 +595,8 @@ router.put('/:id', authMiddleware, (req, res) => {
 
 // 删除学习任务(管理员)
 // DELETE /api/learning-tasks/:id
-router.delete('/:id', authMiddleware, (req, res) => {
+router.delete('/:id', authMiddleware, adminMiddleware, (req, res) => {
   try {
-    // 检查管理员权限
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({
-        code: -1,
-        msg: '需要管理员权限',
-        data: null
-      });
-    }
-
     const { id } = req.params;
 
     const task = db.prepare('SELECT * FROM learning_tasks WHERE id = ?').get(id);
@@ -601,7 +608,20 @@ router.delete('/:id', authMiddleware, (req, res) => {
       });
     }
 
+    // 检查是否有培训关联此学习资料
+    const relatedTrainings = db.prepare(`
+      SELECT id, title FROM exam_trainings WHERE learning_task_id = ?
+    `).all(id);
+    if (relatedTrainings.length > 0) {
+      return res.status(400).json({
+        code: -1,
+        msg: `该学习资料已被 ${relatedTrainings.length} 个培训引用，无法删除`,
+        data: { related_trainings: relatedTrainings }
+      });
+    }
+
     // 删除任务(级联删除权限和进度)
+    db.prepare('DELETE FROM learning_progress WHERE task_id = ?').run(id);
     db.prepare('DELETE FROM learning_tasks WHERE id = ?').run(id);
 
     res.json({

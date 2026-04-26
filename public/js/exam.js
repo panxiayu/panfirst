@@ -7,8 +7,11 @@ let papers = [];
 let records = [];
 let trainingTasks = [];
 let myTrainingRecords = [];
+let questionBanks = []; // 题库数据（来自 exam_banks 表）
 let currentImportExamId = null;
 let pendingExamForm = null; // 保存新建培训表单状态，用于从创建资料/题库返回后恢复
+let pendingQuestionData = null; // 保存待导入的题库数据（file或text）
+let pendingQuestionFile = null; // 保存待导入的文件
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!token) {
@@ -16,6 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'admin/login.html';
         return;
     }
+    // 权限检查
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    if (!currentUser.can_manage_training) { alert('无权限访问培训管理'); window.location.href = 'dashboard.html'; return; }
     loadData();
 });
 
@@ -95,6 +101,10 @@ function switchTab(tab) {
     if (tab === 'training') {
         renderTrainingTasks();
     }
+    // 切换到题库管理标签页时，如果题库为空则刷新数据
+    if (tab === 'questions' && questionBanks.length === 0) {
+        loadData();
+    }
 }
 
 function loadData() {
@@ -124,12 +134,12 @@ function loadData() {
             console.error('stats/user error:', err);
             return { code: -1, data: {} };
         }),
-        fetch(`${API_URL}/exam-admin/papers`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => {
-            console.log('exam-admin/papers response:', r.status, r.statusText);
-            if (!r.ok) throw new Error('exam-admin/papers failed: ' + r.status);
+        fetch(`${API_URL}/exam-trainings`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => {
+            console.log('exam-trainings response:', r.status, r.statusText);
+            if (!r.ok) throw new Error('exam-trainings failed: ' + r.status);
             return r.json();
         }).catch(err => {
-            console.error('exam-admin/papers error:', err);
+            console.error('exam-trainings error:', err);
             return { code: -1, data: [] };
         }),
         fetch(`${API_URL}/learning-materials`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => {
@@ -147,15 +157,25 @@ function loadData() {
         }).catch(err => {
             console.error('learning-tasks/my-records error:', err);
             return { code: -1, data: [] };
+        }),
+        fetch(`${API_URL}/question-banks`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => {
+            console.log('question-banks response:', r.status, r.statusText);
+            if (!r.ok) throw new Error('question-banks failed: ' + r.status);
+            return r.json();
+        }).catch(err => {
+            console.error('question-banks error:', err);
+            return { code: -1, data: [] };
         })
-    ]).then(([examData, statsData, papersData, trainingData, myRecordsData]) => {
-        console.log('All responses received:', { examData, statsData, papersData, trainingData, myRecordsData });
+    ]).then(([examData, statsData, papersData, trainingData, myRecordsData, questionBanksData]) => {
+        console.log('All responses received:', { examData, statsData, papersData, trainingData, myRecordsData, questionBanksData });
         exams = examData.data || [];
         papers = papersData.data || [];
         trainingTasks = trainingData.data || [];
+        questionBanks = questionBanksData.data || [];
         console.log('loadData后trainingTasks:', trainingTasks.length, '条');
+        console.log('loadData后questionBanks:', questionBanks.length, '条');
         myTrainingRecords = myRecordsData.data || [];
-        const stats = statsData.data || {};
+        const stats = statsData.data?.summary || {};
         renderExamList(stats);
         // 恢复当前标签页状态
         switchTab(currentTab);
@@ -172,25 +192,6 @@ function renderExamList(stats) {
     const avgScore = stats.avg_score || 0;
 
     document.getElementById('examList').innerHTML = `
-        <div class="stats-row">
-            <div class="card" style="text-align: center;">
-                <div class="stat-value" style="color: var(--accent);">${exams.length}</div>
-                <div class="stat-label">试卷数量</div>
-            </div>
-            <div class="card" style="text-align: center;">
-                <div class="stat-value" style="color: var(--accent);">${totalExams}</div>
-                <div class="stat-label">考试次数</div>
-            </div>
-            <div class="card" style="text-align: center;">
-                <div class="stat-value" style="color: var(--success);">${passedExams}</div>
-                <div class="stat-label">通过考试</div>
-            </div>
-            <div class="card" style="text-align: center;">
-                <div class="stat-value" style="color: var(--warning);">${avgScore}</div>
-                <div class="stat-label">平均分数</div>
-            </div>
-        </div>
-
         <div class="tab-bar">
             <button class="tab-btn active" data-tab="records" onclick="switchTab('records')">培训记录</button>
             <button class="tab-btn" data-tab="papers" onclick="switchTab('papers')">培训任务</button>
@@ -200,9 +201,174 @@ function renderExamList(stats) {
 
         <!-- 考试列表标签页 -->
         <div id="papersTab" class="tab-content ${currentTab === 'papers' ? 'active' : ''}">
-            ${papers.length === 0 ? '<div class="empty-state">暂无考试</div>' : ''}
+            <!-- 新建培训表单 -->
+            <div id="createExamForm" class="card" style="padding:24px;margin-bottom:24px;display:none;">
+                <div style="font-size:18px;font-weight:700;margin-bottom:20px;" id="examFormTitle">新建培训</div>
+
+                <!-- 步骤指示器 -->
+                <div class="step-indicator">
+                    <div class="step-item active" data-step="1">
+                        <div class="step-num">1</div>
+                        <div class="step-label">基本信息</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step-item" data-step="2">
+                        <div class="step-num">2</div>
+                        <div class="step-label">学习资料</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step-item" data-step="3">
+                        <div class="step-num">3</div>
+                        <div class="step-label">题库试卷</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step-item" data-step="4">
+                        <div class="step-num">4</div>
+                        <div class="step-label">分配权限</div>
+                    </div>
+                </div>
+
+                <!-- 步骤1：基本信息 -->
+                <div id="step1" class="step-content">
+                    <div class="form-group">
+                        <label style="font-weight:600;margin-bottom:8px;display:block;">培训标题 *</label>
+                        <input type="text" id="examTitle" class="form-control" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg);color:var(--text);font-size:14px;" placeholder="请输入培训标题" value="测试培训-2026-04-25">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight:600;margin-bottom:8px;display:block;">培训描述</label>
+                        <textarea id="examDescription" class="form-control" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg);color:var(--text);resize:vertical;min-height:80px;font-size:14px;" placeholder="请输入培训描述（可选）">本培训用于测试系统功能</textarea>
+                    </div>
+
+                    <div style="display:flex;gap:16px;">
+                        <div class="form-group" style="flex:1;">
+                            <label style="font-weight:600;margin-bottom:8px;display:block;">培训开始时间 *</label>
+                            <input type="datetime-local" id="examStartTime" class="form-control" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg);color:var(--text);font-size:14px;" value="2026-04-26T09:00">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label style="font-weight:600;margin-bottom:8px;display:block;">培训结束时间 *</label>
+                            <input type="datetime-local" id="examEndTime" class="form-control" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg);color:var(--text);font-size:14px;" value="2026-05-26T18:00">
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:16px;">
+                        <div class="form-group" style="flex:1;">
+                            <label style="font-weight:600;margin-bottom:8px;display:block;">考试时长（分钟）*</label>
+                            <input type="number" id="examDuration" class="form-control" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg);color:var(--text);font-size:14px;" value="60" min="1">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label style="font-weight:600;margin-bottom:8px;display:block;">及格分数 *</label>
+                            <input type="number" id="examPassScore" class="form-control" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg);color:var(--text);font-size:14px;" value="60" min="1" max="100">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 步骤2：关联学习资料 -->
+                <div id="step2" class="step-content" style="display:none;">
+                    <div class="form-group">
+                        <label style="font-weight:600;margin-bottom:8px;display:block;">关联学习资料</label>
+                        <select id="examLearningTask" class="form-control" style="width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg);color:var(--text);font-size:14px;" onchange="onLearningTaskChangeInline(this.value)">
+                            <option value="">请选择学习资料</option>
+                            ${(Array.isArray(trainingTasks) ? trainingTasks : []).map(t => `<option value="${t.id}">${t.title || '资料 ' + t.id}</option>`).join('') || '<option value="">暂无学习资料</option>'}
+                            <option value="__new__">+ 创建新资料</option>
+                        </select>
+                    </div>
+                    <div id="selectedLearningTask" style="margin-top:12px;padding:12px;background:rgba(74,144,226,0.08);border-radius:12px;display:none;">
+                        <div style="font-size:13px;color:var(--text-soft);">已选择：<span id="selectedLearningTaskName" style="font-weight:600;color:var(--text);"></span></div>
+                    </div>
+                </div>
+
+                <!-- 步骤3：关联题库 -->
+                <div id="step3" class="step-content" style="display:none;">
+                    <div class="form-group">
+                        <label style="font-weight:600;margin-bottom:8px;display:block;">关联题库试卷</label>
+                        <select id="examQuestionBank" class="form-control" style="width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg);color:var(--text);font-size:14px;" onchange="onQuestionBankChangeInline(this.value)">
+                            <option value="">请选择题库</option>
+                            ${questionBanks.map(b => `<option value="${b.id}">${b.title || '题库 ' + b.id} (${b.question_count || 0}题)</option>`).join('') || '<option value="">暂无题库</option>'}
+                            <option value="__new__">+ 创建新题库</option>
+                        </select>
+                    </div>
+                    <div id="selectedQuestionBank" style="margin-top:12px;padding:12px;background:rgba(74,144,226,0.08);border-radius:12px;display:none;">
+                        <div style="font-size:13px;color:var(--text-soft);">已选择：<span id="selectedQuestionBankName" style="font-weight:600;color:var(--text);"></span></div>
+                    </div>
+                </div>
+
+                <!-- 步骤4：分配权限 -->
+                <div id="step4" class="step-content" style="display:none;">
+                    <div class="form-group">
+                        <label style="font-weight:600;margin-bottom:12px;display:block;">授权方式</label>
+                        <div style="display:flex;gap:12px;margin-bottom:16px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:12px 20px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);flex:1;transition:all 0.2s;" id="radioAllStaffLabel">
+                                <input type="radio" name="permType" value="all" id="radioAllStaff" checked onchange="togglePermType()" style="width:18px;height:18px;accent-color:var(--primary);">
+                                <div>
+                                    <div style="font-weight:600;font-size:14px;">全员授权</div>
+                                    <div style="font-size:11px;color:var(--text-soft);margin-top:2px;">所有员工均可参加考试</div>
+                                </div>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:12px 20px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);flex:1;transition:all 0.2s;" id="radioManualLabel">
+                                <input type="radio" name="permType" value="manual" id="radioManual" onchange="togglePermType()" style="width:18px;height:18px;accent-color:var(--primary);">
+                                <div>
+                                    <div style="font-weight:600;font-size:14px;">手动选择</div>
+                                    <div style="font-size:11px;color:var(--text-soft);margin-top:2px;">指定员工参加考试</div>
+                                </div>
+                            </label>
+                        </div>
+                        <div id="manualPermSection" style="display:none;">
+                            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                                <input type="text" id="staffSearchInput" class="form-control" style="flex:1;min-width:150px;padding:10px 12px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg);font-size:13px;" placeholder="搜索工号或姓名..." oninput="filterStaffList(this.value)">
+                                <button class="btn btn-sm btn-secondary" onclick="selectAllStep4Staff()">全选</button>
+                                <button class="btn btn-sm btn-secondary" onclick="deselectAllStep4Staff()">全取消</button>
+                                <button class="btn btn-sm btn-primary" onclick="showDeptSelectModal()">按部门选择</button>
+                            </div>
+                            <div id="step4StaffList" style="max-height:250px;overflow-y:auto;border:1.5px solid var(--border);border-radius:14px;padding:12px;background:var(--bg);">
+                                <div style="text-align:center;padding:40px;color:var(--text-soft);">加载中...</div>
+                            </div>
+                            <div style="margin-top:8px;font-size:12px;color:var(--text-soft);">已选择 <span id="step4SelectedCount">0</span> / <span id="step4TotalCount">0</span> 人</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 部门选择弹窗 -->
+                <div class="modal" id="deptSelectModal">
+                    <div class="modal-box" style="max-width:400px;">
+                        <div class="modal-title">按部门选择</div>
+                        <div id="deptCheckboxes" style="max-height:300px;overflow-y:auto;margin:16px 0;"></div>
+                        <div class="modal-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="closeDeptSelectModal()">取消</button>
+                            <button class="btn btn-primary btn-sm" onclick="confirmDeptSelect()">确认</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 按钮区域 -->
+                <div style="display:flex;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+                    <button class="btn btn-secondary btn-sm" id="prevStepBtn" onclick="prevStep()" style="display:none;">上一步</button>
+                    <button class="btn btn-success btn-sm" id="draftSubmitBtn" onclick="draftExam()">暂存</button>
+                    <button class="btn btn-primary btn-sm" id="nextStepBtn" onclick="console.log('NEXT button clicked, currentStep=', currentStep); nextStep()">下一步 →</button>
+                    <button class="btn btn-success btn-sm" id="submitExamBtn" onclick="console.log('SUBMIT button clicked, currentStep=', currentStep); createExam()" style="display:none;">✓ 完成创建</button>
+                    <button class="btn btn-secondary btn-sm" onclick="hideCreateExamForm()" style="margin-left:auto;">取消</button>
+                </div>
+
+                <div id="createExamResult" class="import-result" style="display:none;margin-top:16px;padding:12px;border-radius:14px;"></div>
+            </div>
+
+            <style>
+                .step-indicator { display:flex;align-items:center;justify-content:space-between;margin-bottom:24px; }
+                .step-item { display:flex;flex-direction:column;align-items:center;gap:6px;min-width:70px; }
+                .step-num { width:28px;height:28px;min-width:28px;border-radius:50%;background:var(--border);color:var(--text-soft);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;position:relative;z-index:1; }
+                .step-item.active .step-num { background:var(--primary);color:#fff; }
+                .step-item.completed .step-num { background:var(--accent);color:#fff; }
+                .step-label { font-size:12px;color:var(--text-soft);white-space:nowrap;text-align:center; }
+                .step-item.active .step-label { color:var(--text);font-weight:600; }
+                .step-line { flex:1;height:2px;background:var(--border);min-width:40px;margin-top:-18px;position:relative;z-index:0; }
+                .step-content { animation:fadeIn 0.3s ease; }
+                @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+            </style>
+
+            <!-- 考试列表（只显示已分配权限的培训） -->
+            ${papers.filter(t => t.perm_count > 0).length === 0 ? '<div class="empty-state">暂无培训任务</div>' : ''}
             <div class="card-grid">
-                ${papers.map(exam => {
+                ${papers.filter(t => t.perm_count > 0).map(exam => {
                     const isActive = exam.is_active === 1;
                     return `
                     <div class="card exam-card" style="padding: 16px; position: relative;">
@@ -215,6 +381,7 @@ function renderExamList(stats) {
                             <span>时长: ${exam.duration || 60}分钟</span>
                             <span>及格: ${exam.pass_score || 60}分</span>
                             <span>题目: ${exam.question_count || 0} 题</span>
+                            <span>授权: ${exam.perm_count || 0} 人</span>
                         </div>
                         <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: nowrap; align-items: center;">
                             <button class="btn btn-sm ${isActive ? 'btn-danger' : 'btn-primary'}" onclick="toggleExamStatus(${exam.id}, ${isActive ? 1 : 0}, ${exam.learning_task_id || 0})" style="flex: 1; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); font-weight: 600;">
@@ -238,11 +405,11 @@ function renderExamList(stats) {
             </div>
         </div>
 
-        <!-- 学习任务标签页 -->
+        <!-- 学习资料标签页 -->
         <div id="trainingTab" class="tab-content">
             <div id="loadingTasks" class="loading" style="padding:40px;text-align:center;">加载中...</div>
-            <div id="emptyTasks" class="empty-state" style="display:none;">暂无学习任务</div>
-            <div id="trainingTaskList" class="task-grid"></div>
+            <div id="emptyTasks" class="empty-state" style="display:none;">暂无学习资料</div>
+            <div id="trainingTaskList" class="card-grid"></div>
         </div>
 
         <div id="recordsTab" class="tab-content ${currentTab === 'records' ? 'active' : ''}">
@@ -295,15 +462,23 @@ function renderExamList(stats) {
         </div>
 
         <div id="questionsTab" class="tab-content">
-            ${papers.filter(p => !p.source_exam_id).length === 0 ? '<div class="empty-state">暂无试卷</div>' : ''}
+            ${questionBanks.length === 0 ? '<div class="empty-state">暂无题库</div>' : ''}
             <div class="card-grid">
-                ${papers.filter(p => !p.source_exam_id).map(exam => `
-                    <div class="card exam-card" style="padding: 16px; position: relative; cursor: pointer;" onclick="previewPaper(${exam.id})">
-                        <div class="card-title" style="margin: 0 0 10px 0;">${exam.title || '未命名试卷'}</div>
-                        <p class="card-desc">${exam.description || '暂无描述'}</p>
+                ${questionBanks.map(bank => `
+                    <div class="card exam-card" style="padding: 16px; position: relative; cursor: pointer;" onclick="previewQuestionBank(${bank.id})">
+                        <div class="card-title" style="margin: 0 0 8px 0;">${bank.title || '未命名题库'}</div>
+                        <p class="card-desc" style="margin-bottom: 10px;">${bank.description || '暂无描述'}</p>
                         <div class="card-meta">
-                            <span>题目: ${exam.question_count || 0} 题</span>
-                            <span>总分: ${exam.total_score || 0} 分</span>
+                            <span>题目: ${bank.question_count || 0} 题</span>
+                            <span>总分: ${bank.total_score || 0} 分</span>
+                        </div>
+                        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: nowrap; align-items: center;">
+                            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openQuestionBankSettings(${bank.id})" style="flex: 1; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); font-weight: 600;">
+                                编辑
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteQuestionBank(${bank.id})" style="flex: 1; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); font-weight: 600;">
+                                删除
+                            </button>
                         </div>
                     </div>
                 `).join('')}
@@ -430,73 +605,6 @@ D. 选项D
             .preview-modal-content::-webkit-scrollbar-corner { background: transparent !important; }
         </style>
 
-        <!-- 创建试卷弹窗 -->
-        <div class="modal" id="createExamModal" style="display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
-            <div class="modal-box" style="background:var(--bg-card);border-radius:var(--radius-lg);padding:24px;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;">
-                <div class="modal-title" style="font-size:18px;font-weight:700;margin-bottom:16px;">+ 新建培训</div>
-
-                <div class="form-group">
-                    <label style="font-weight:600;margin-bottom:8px;display:block;">培训标题 *</label>
-                    <input type="text" id="examTitle" class="form-control" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-input);color:var(--text-primary);" placeholder="请输入培训标题">
-                </div>
-
-                <div class="form-group">
-                    <label style="font-weight:600;margin-bottom:8px;display:block;">培训描述</label>
-                    <textarea id="examDescription" class="form-control" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-input);color:var(--text-primary);resize:vertical;min-height:40px;" placeholder="请输入培训描述（可选）"></textarea>
-                </div>
-
-                <div style="display:flex;gap:16px;">
-                    <div class="form-group" style="flex:1;">
-                        <label style="font-weight:600;margin-bottom:8px;display:block;">考试时长（分钟）</label>
-                        <input type="number" id="examDuration" class="form-control" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-input);color:var(--text-primary);" value="60" min="1">
-                    </div>
-                    <div class="form-group" style="flex:1;">
-                        <label style="font-weight:600;margin-bottom:8px;display:block;">及格分数</label>
-                        <input type="number" id="examPassScore" class="form-control" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-input);color:var(--text-primary);" value="60" min="1">
-                    </div>
-                </div>
-
-                <!-- 关联学习资料 -->
-                <div class="form-group" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-                    <label style="font-weight:600;margin-bottom:8px;display:block;">关联资料</label>
-                    <select id="examLearningTask" class="form-control" style="width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:12px;background:var(--bg-input);color:var(--text-primary);font-size:14px;" onchange="onLearningTaskChange(this.value)">
-                        <option value="">请选择资料</option>
-                        ${(Array.isArray(trainingTasks) ? trainingTasks : []).map(t => `<option value="${t.id}">${t.title || '资料 ' + t.id}</option>`).join('') || '<option value="">暂无学习资料</option>'}
-                        <option value="__new__">+ 创建新资料</option>
-                    </select>
-                </div>
-
-                <!-- 关联题库 -->
-                <div class="form-group" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-                    <label style="font-weight:600;margin-bottom:8px;display:block;">关联题库</label>
-                    <select id="examQuestionBank" class="form-control" style="width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:12px;background:var(--bg-input);color:var(--text-primary);font-size:14px;" onchange="onQuestionBankChange(this.value)">
-                        <option value="">请选择题库</option>
-                        ${(Array.isArray(exams) ? exams : []).filter(e => e.question_count > 0).map(e => `<option value="${e.id}">${e.title || '试卷 ' + e.id} (${e.question_count}题)</option>`).join('') || '<option value="">暂无题库</option>'}
-                        <option value="__new__">+ 创建新题库</option>
-                    </select>
-                </div>
-
-                <!-- 导入考试人员 -->
-                <div class="form-group" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-                    <label style="font-weight:600;margin-bottom:8px;display:block;">考试人员</label>
-                    <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
-                        <input type="file" id="examParticipantsFile" accept=".xlsx,.xls,.csv" style="flex:1;min-width:150px;font-size:13px;padding:8px;">
-                        <button class="btn btn-secondary btn-sm" onclick="downloadParticipantTemplate()" style="white-space:nowrap;">📥 下载模板</button>
-                    </div>
-                    <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">支持 xlsx、xls、csv 格式，每行一个工号</div>
-                    <div id="participantFileInfo" style="font-size:12px;color:var(--text-secondary);margin-top:4px;display:none;"></div>
-                </div>
-
-                <div style="display:flex;gap:10px;margin-top:16px;">
-                    <button class="btn btn-success btn-sm" id="draftSubmitBtn" onclick="draftExam()" style="flex:1;">暂存</button>
-                    <button class="btn btn-primary btn-sm" id="examSubmitBtn" onclick="createExam()" style="flex:1;">创建</button>
-                    <button class="btn btn-secondary btn-sm" onclick="closeCreateExamModal()" style="flex:1;">取消</button>
-                </div>
-
-                <div id="createExamResult" class="import-result" style="display:none;margin-top:16px;padding:12px;border-radius:var(--radius);"></div>
-            </div>
-        </div>
-
         <!-- 学习任务选择弹窗 -->
         <div class="modal" id="taskSelectModal" style="display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
             <div class="modal-box" style="background:var(--bg-card);border-radius:var(--radius-lg);padding:24px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;">
@@ -521,7 +629,7 @@ D. 选项D
 async function previewPaper(examId) {
     // 获取试卷详情
     try {
-        const res = await fetch(`${API_URL}/exam-admin/paper/${examId}`, {
+        const res = await fetch(`${API_URL}/exam-trainings/${examId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         }).then(r => r.json());
 
@@ -530,7 +638,7 @@ async function previewPaper(examId) {
             return;
         }
 
-        const { exam, questions } = res.data;
+        const { training: exam, questions } = res.data;
         showPaperPreviewModal(exam, questions);
     } catch (err) {
         alert('获取试卷详情失败');
@@ -542,13 +650,12 @@ async function deleteExam(examId) {
         return;
     }
     try {
-        const res = await fetch(`${API_URL}/exam-admin/paper/${examId}`, {
+        const res = await fetch(`${API_URL}/exam-trainings/${examId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         }).then(r => r.json());
 
         if (res.code === 0) {
-            alert('删除成功');
             loadData();
         } else {
             alert(res.msg || '删除失败');
@@ -564,35 +671,59 @@ let currentEditingExamId = null;
 async function openExamSettings(examId) {
     currentEditingExamId = examId;
 
-    // 查找考试数据
-    const exam = papers.find(e => e.id === examId);
+    // 查找培训数据（从 papers 中查找）
+    const exam = papers.find(t => t.id === examId);
     if (!exam) {
         alert('考试不存在');
         return;
+    }
+
+    const form = document.getElementById('createExamForm');
+    if (!form) return;
+
+    // 刷新学习资料下拉框
+    const learningTaskSelect = document.getElementById('examLearningTask');
+    if (learningTaskSelect) {
+        let options = '<option value="">请选择资料</option>';
+        if (trainingTasks && trainingTasks.length > 0) {
+            options += trainingTasks.map(t => `<option value="${t.id}">${t.title || '资料 ' + t.id}</option>`).join('');
+        }
+        options += '<option value="__new__">+ 创建新资料</option>';
+        learningTaskSelect.innerHTML = options;
     }
 
     // 刷新题库下拉框
     const questionBankSelect = document.getElementById('examQuestionBank');
     if (questionBankSelect) {
         questionBankSelect.innerHTML = '<option value="">请选择题库</option>' +
-            papers.filter(e => !e.source_exam_id && e.question_count > 0).map(e => `<option value="${e.id}">${e.title || '试卷 ' + e.id} (${e.question_count}题)</option>`).join('') +
+            questionBanks.map(b => `<option value="${b.id}">${b.title || '题库 ' + b.id} (${b.question_count || 0}题)</option>`).join('') +
             '<option value="__new__">+ 创建新题库</option>';
-        questionBankSelect.value = examId;
+        questionBankSelect.value = exam.question_bank_id || '';
     }
 
     // 填充表单
     document.getElementById('examTitle').value = exam.title || '';
     document.getElementById('examDescription').value = exam.description || '';
+    document.getElementById('examStartTime').value = exam.start_time || '';
+    document.getElementById('examEndTime').value = exam.end_time || '';
     document.getElementById('examDuration').value = exam.duration || 60;
     document.getElementById('examPassScore').value = exam.pass_score || 60;
-    document.getElementById('examParticipantsFile').value = '';
-    document.getElementById('participantFileInfo').style.display = 'none';
+    document.getElementById('examLearningTask').value = exam.learning_task_id || '';
+    document.getElementById('examQuestionBank').value = exam.question_bank_id || '';
+    const participantFileEl2 = document.getElementById('examParticipantsFile');
+    if (participantFileEl2) participantFileEl2.value = '';
+    const participantFileInfoEl2 = document.getElementById('participantFileInfo');
+    if (participantFileInfoEl2) participantFileInfoEl2.style.display = 'none';
     document.getElementById('createExamResult').style.display = 'none';
 
-    // 更新弹窗标题
-    const modalTitle = document.querySelector('#createExamModal .modal-title');
-    if (modalTitle) {
-        modalTitle.textContent = '考试设置';
+    // 重置步骤
+    currentStep = 1;
+    updateStepUI();
+
+    // 更新表单标题
+    const formTitle = document.getElementById('examFormTitle');
+    if (formTitle) {
+        formTitle.textContent = '考试设置';
     }
 
     // 更改提交按钮文字
@@ -601,8 +732,122 @@ async function openExamSettings(examId) {
         submitBtn.textContent = '保存';
     }
 
-    // 显示弹窗（复用createExamModal）
-    document.getElementById('createExamModal').style.display = 'flex';
+    // 显示表单
+    form.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ============ 题库管理函数 ============
+
+async function previewQuestionBank(bankId) {
+    // 获取题库详情
+    try {
+        const res = await fetch(`${API_URL}/question-banks/${bankId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json());
+
+        if (res.code !== 0) {
+            alert(res.msg || '获取题库详情失败');
+            return;
+        }
+
+        const { bank, questions } = res.data;
+        showQuestionBankPreviewModal(bank, questions);
+    } catch (err) {
+        alert('获取题库详情失败');
+    }
+}
+
+function showQuestionBankPreviewModal(bank, questions) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'questionBankPreviewModal';
+    modal.style.cssText = 'position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
+
+    const questionsHtml = questions.length === 0
+        ? '<div style="padding:20px;text-align:center;color:#999;">暂无题目</div>'
+        : questions.map((q, i) => {
+            const typeMap = { 'true_false': '判断题', 'single_choice': '单选题', 'multiple_choice': '多选题' };
+            const typeName = typeMap[q.type] || q.type;
+            const options = q.options ? JSON.parse(q.options) : [];
+            const optionsHtml = options.map((opt, idx) => {
+                const letter = String.fromCharCode(65 + idx);
+                return `<div style="margin:6px 0;padding:8px;background:var(--bg-surface);border-radius:4px;">${letter}. ${escapeHtml(opt)}</div>`;
+            }).join('');
+
+            return `
+                <div style="margin-bottom:20px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                        <span style="background:var(--accent);color:white;padding:2px 8px;border-radius:10px;font-size:11px;">${typeName}</span>
+                        <span style="color:var(--text-secondary);font-size:12px;">${q.score}分</span>
+                    </div>
+                    <div style="font-weight:600;margin-bottom:12px;">${i + 1}. ${escapeHtml(q.content)}</div>
+                    <div style="padding-left:10px;">${optionsHtml}</div>
+                </div>
+            `;
+        }).join('');
+
+    modal.innerHTML = `
+        <div style="background:white;border-radius:16px;width:90%;max-width:700px;max-height:80vh;overflow-y:auto;padding:24px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h3 style="margin:0;">${escapeHtml(bank.title)}</h3>
+                <button onclick="this.closest('.modal').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;padding:4px 8px;">&times;</button>
+            </div>
+            <div style="margin-bottom:16px;padding:12px;background:var(--bg);border-radius:8px;">
+                <div style="color:var(--text-secondary);font-size:13px;">题目: ${questions.length} 题 | 总分: ${bank.total_score || 0} 分</div>
+            </div>
+            ${questionsHtml}
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
+
+async function deleteQuestionBank(bankId) {
+    if (!confirm('确定要删除此题库吗？删除后不可恢复。')) {
+        return;
+    }
+    try {
+        const res = await fetch(`${API_URL}/question-banks/${bankId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json());
+
+        if (res.code === 0) {
+            alert('删除成功');
+            loadData();
+        } else {
+            // 如果有相关培训信息，显示详情
+            if (res.data?.related_trainings?.length > 0) {
+                const trainings = res.data.related_trainings.map(t => `• ${t.title || '培训' + t.id}`).join('\n');
+                alert(`${res.msg}\n\n关联培训：\n${trainings}\n\n请先删除或修改这些培训的题库设置。`);
+            } else {
+                alert(res.msg || '删除失败');
+            }
+        }
+    } catch (err) {
+        alert('删除失败');
+    }
+}
+
+let currentEditingQuestionBankId = null;
+
+async function openQuestionBankSettings(bankId) {
+    currentEditingQuestionBankId = bankId;
+
+    // 查找题库数据
+    const bank = questionBanks.find(b => b.id === bankId);
+    if (!bank) {
+        alert('题库不存在');
+        return;
+    }
+
+    // 显示导入弹窗
+    document.getElementById('importExamTitle').value = bank.title;
+    document.getElementById('importExamDesc').value = bank.description || '';
+    document.getElementById('questionImportModal').style.display = 'flex';
 }
 
 function showPaperPreviewModal(exam, questions) {
@@ -743,11 +988,7 @@ function renderTrainingTasks() {
     const loading = document.getElementById('loadingTasks');
     const empty = document.getElementById('emptyTasks');
 
-    console.log('renderTrainingTasks called, trainingTasks:', trainingTasks.length, '条');
-    if (!container) {
-        console.log('container不存在!');
-        return;
-    }
+    if (!container) return;
 
     if (trainingTasks.length === 0) {
         loading.style.display = 'none';
@@ -760,43 +1001,73 @@ function renderTrainingTasks() {
     empty.style.display = 'none';
 
     container.innerHTML = trainingTasks.map(task => {
-        const progress = task.progress_percent || 0;
-        let statusClass = 'not-started';
-        let statusText = '未开始';
-        if (progress >= 100) {
-            statusClass = 'completed';
-            statusText = '已完成';
-        } else if (progress > 0) {
-            statusClass = 'in-progress';
-            statusText = '学习中';
+        // 格式化视频时长
+        let durationStr = '';
+        if (task.duration) {
+            const mins = Math.floor(task.duration / 60);
+            const secs = task.duration % 60;
+            durationStr = `${mins}:${String(secs).padStart(2, '0')}`;
         }
         return `
-        <div class="task-card" data-id="${task.id}" onclick="goToTaskDetail(${task.id}, event)">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                <input type="checkbox" class="task-checkbox" ${selectedTasks.has(task.id) ? 'checked' : ''} onclick="event.stopPropagation(); toggleTask(${task.id})">
-                <div style="display:flex;gap:4px;align-items:center;">
-                    <span class="progress-badge progress-badge-${statusClass}">${statusText}</span>
-                    <button class="btn btn-danger btn-sm" style="padding:2px 8px;font-size:11px;" onclick="event.stopPropagation(); deleteTask(${task.id})">删除</button>
-                </div>
-            </div>
-            <div class="task-title" style="margin-bottom: 8px;">${task.title || '未命名任务'}</div>
-            <div class="task-time">${task.start_time ? formatTaskTime(task.start_time) : ''} - ${task.end_time ? formatTaskTime(task.end_time) : ''}</div>
-            <div class="task-stats">
-                <div class="stat-item">
-                    <div class="stat-value">${progress}%</div>
-                    <div class="stat-label">完成度</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">${task.total_count || 0}</div>
-                    <div class="stat-label">总人数</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">${task.completed_count || 0}</div>
-                    <div class="stat-label">已完成</div>
-                </div>
+        <div class="card exam-card" style="padding: 16px; position: relative; cursor: pointer;" onclick="previewLearningMaterial(${task.id})">
+            <div class="card-title" style="margin: 0 0 8px 0;">${task.title || '未命名资料'}</div>
+            <p class="card-desc" style="margin-bottom: 6px;">${task.description || '暂无描述'}</p>
+            ${durationStr ? `<div style="font-size: 12px; color: var(--text-soft); margin-bottom: 8px;">📹 ${durationStr}</div>` : ''}
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: nowrap; align-items: center;">
+                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); editTask(${task.id})" style="flex: 1; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); font-weight: 600;">
+                    编辑
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteTask(${task.id})" style="flex: 1; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); font-weight: 600;">
+                    删除
+                </button>
             </div>
         </div>
     `}).join('');
+}
+
+function previewLearningMaterial(taskId) {
+    const task = trainingTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (task.file_url) {
+        showVideoPreviewModal(task);
+    } else {
+        editTask(taskId);
+    }
+}
+
+function showVideoPreviewModal(task) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'videoPreviewModal';
+    modal.style.cssText = 'position:fixed;z-index:2000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;';
+
+    modal.innerHTML = `
+        <div style="width:90%;max-width:900px;background:var(--bg-card);border-radius:var(--radius-lg);padding:24px;max-height:90vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div style="font-size:18px;font-weight:700;">${escapeHtml(task.title || '学习资料预览')}</div>
+                <button onclick="closeVideoPreviewModal()" style="border:none;background:none;font-size:24px;cursor:pointer;">×</button>
+            </div>
+            <div style="margin-bottom:16px;">
+                <span style="font-size:13px;color:var(--text-soft);">${task.description || '暂无描述'}</span>
+            </div>
+            <div style="position:relative;padding-bottom:56.25%;height:0;background:#000;border-radius:12px;overflow:hidden;">
+                <video style="position:absolute;top:0;left:0;width:100%;height:100%;" controls>
+                    <source src="${task.file_url}" type="video/mp4">
+                    您的浏览器不支持视频播放
+                </video>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+}
+
+function closeVideoPreviewModal() {
+    const modal = document.getElementById('videoPreviewModal');
+    if (modal) {
+        modal.remove();
+    }
 }
 
 let selectedTasks = new Set();
@@ -946,6 +1217,9 @@ async function saveTask() {
                 fileUrl = uploadRes.data.file_url;
                 data.file_url = fileUrl;
                 data.file_type = 'mp4';
+                if (uploadRes.data.duration) {
+                    data.duration = uploadRes.data.duration;
+                }
             } catch (err) {
                 alert(err.message || '文件上传失败');
                 return;
@@ -1053,10 +1327,15 @@ async function deleteTask(taskId) {
         }).then(r => r.json());
 
         if (res.code === 0) {
-            alert('删除成功');
             loadData();
         } else {
-            alert(res.msg || '删除失败');
+            // 如果有相关培训信息，显示详情
+            if (res.data?.related_trainings?.length > 0) {
+                const trainings = res.data.related_trainings.map(t => `• ${t.title || '培训' + t.id}`).join('\n');
+                alert(`${res.msg}\n\n关联培训：\n${trainings}\n\n请先删除或修改这些培训的学习资料设置。`);
+            } else {
+                alert(res.msg || '删除失败');
+            }
         }
     } catch (err) {
         alert('删除失败');
@@ -1068,11 +1347,18 @@ function closeQuestionImport() {
     // 清除pending状态
     localStorage.removeItem('pendingExamTitle');
     localStorage.removeItem('pendingExamDesc');
+    localStorage.removeItem('pendingExamStartTime');
+    localStorage.removeItem('pendingExamEndTime');
     localStorage.removeItem('pendingExamDuration');
     localStorage.removeItem('pendingExamPassScore');
+    localStorage.removeItem('pendingExamMode');
+    localStorage.removeItem('pendingQuestionTitle');
+    localStorage.removeItem('pendingQuestionDesc');
 }
 
 function showQuestionImport() {
+    // 确保不是wizard模式
+    localStorage.removeItem('pendingExamMode');
     document.getElementById('importExamTitle').value = '';
     document.getElementById('importExamDesc').value = '';
     document.getElementById('importText').value = '';
@@ -1213,86 +1499,77 @@ async function importQuestions() {
         return;
     }
 
-    // 检查是否是 "__new__" 流程
-    const pendingTitle = localStorage.getItem('pendingExamTitle');
-    const pendingDesc = localStorage.getItem('pendingExamDesc');
-    const pendingDuration = localStorage.getItem('pendingExamDuration');
-    const pendingPassScore = localStorage.getItem('pendingExamPassScore');
-    const isPendingNew = !!pendingTitle;
+    // 检查是否是4步创建培训流程（通过pendingExamMode标记）
+    const isWizardFlow = localStorage.getItem('pendingExamMode') === 'wizard';
 
     const resultEl = document.getElementById('importResult');
 
     try {
-        let newExamId;
+        if (isWizardFlow) {
+            // 4步创建培训流程：保存题库数据，进入第4步
+            if (file) {
+                pendingQuestionFile = file;
+                pendingQuestionData = null;
+            } else {
+                pendingQuestionData = text;
+                pendingQuestionFile = null;
+            }
+            localStorage.setItem('pendingQuestionTitle', examTitle);
+            localStorage.setItem('pendingQuestionDesc', examDesc);
 
-        // 如果是新建题库流程，先创建考试
-        if (isPendingNew) {
-            console.log('Creating new exam with:', { title: pendingTitle, description: pendingDesc, duration: pendingDuration, pass_score: pendingPassScore });
-            const createRes = await fetch(`${API_URL}/exam-admin/paper`, {
+            closeQuestionImport();
+            currentStep = 4;
+            updateStepUI();
+
+            if (document.getElementById('radioManual')?.checked && step4AllStaff.length === 0) {
+                loadStep4StaffList();
+            }
+        } else {
+            // 题库管理直接导入：直接创建题库并导入题目
+            resultEl.className = 'import-result';
+            resultEl.textContent = '正在创建题库...';
+            resultEl.style.display = 'block';
+
+            // 1. 创建题库
+            const createRes = await fetch(`${API_URL}/question-banks`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    title: pendingTitle,
-                    description: pendingDesc || '',
-                    duration: parseInt(pendingDuration) || 60,
-                    pass_score: parseInt(pendingPassScore) || 60,
-                    is_active: false
+                    title: examTitle,
+                    description: examDesc,
+                    duration: 60,
+                    pass_score: 60
                 })
-            }).then(r => {
-                console.log('Create exam response status:', r.status);
-                return r.json();
-            });
-
-            console.log('Create exam result:', createRes);
+            }).then(r => r.json());
 
             if (createRes.code !== 0) {
-                alert(createRes.msg || '创建考试失败');
-                return;
+                throw new Error(createRes.msg || '创建题库失败');
             }
-            newExamId = createRes.data.id;
-            console.log('Created exam ID:', newExamId);
-        }
 
-        console.log('Importing with paperId:', newExamId, 'text length:', text ? text.length : 0, 'has file:', !!file);
+            const bankId = createRes.data?.id;
+            resultEl.textContent = '题库创建成功，正在导入题目...';
 
-        // 导入题目
-        let res;
-        if (file) {
-            res = await importQuestionsAPI(file, newExamId);
-        } else {
-            res = await importQuestionsAPI(text, newExamId);
-        }
+            // 2. 导入题目
+            const qRes = await importQuestionsAPI(file || text, bankId);
+            if (qRes.code !== 0) {
+                throw new Error(qRes.msg || '导入题目失败');
+            }
 
-        console.log('Import result:', res);
-
-        if (res.code === 0) {
             resultEl.className = 'import-result success';
-            const qCount = res.data?.questionCount || res.data?.count || 0;
-            resultEl.textContent = `导入成功！已创建"${pendingTitle || examTitle}"，共 ${qCount} 题`;
-            resultEl.style.display = 'block';
-
-            // 清除pending状态
-            localStorage.removeItem('pendingExamTitle');
-            localStorage.removeItem('pendingExamDesc');
-            localStorage.removeItem('pendingExamDuration');
-            localStorage.removeItem('pendingExamPassScore');
-
-            // 延迟关闭弹窗并刷新列表
+            resultEl.textContent = `✅ 导入成功！已创建题库《${examTitle}》`;
             setTimeout(() => {
                 closeQuestionImport();
+                // 刷新题库列表
                 loadData();
             }, 1500);
-        } else {
-            resultEl.className = 'import-result error';
-            resultEl.textContent = res.msg || '导入失败';
-            resultEl.style.display = 'block';
         }
     } catch (err) {
         console.error('Import error:', err);
-        alert('导入失败: ' + (err?.message || String(err)));
+        resultEl.className = 'import-result error';
+        resultEl.textContent = '导入失败: ' + (err?.message || String(err));
     }
 }
 
@@ -1337,14 +1614,83 @@ function escapeHtml(text) {
 }
 
 // ============ 创建试卷 ============
-function showCreateExamModal() {
-    // 重置编辑状态
+function onQuestionBankChangeInline(value) {
+    console.log('onQuestionBankChangeInline called, value=', value);
+    const modal = document.getElementById('questionImportModal');
+    console.log('questionImportModal element:', modal ? 'exists' : 'NOT FOUND');
+    if (value === '__new__') {
+        const title = document.getElementById('examTitle').value.trim();
+        const description = document.getElementById('examDescription').value.trim();
+        const start_time = document.getElementById('examStartTime').value;
+        const end_time = document.getElementById('examEndTime').value;
+        const duration = document.getElementById('examDuration').value || '60';
+        const passScore = document.getElementById('examPassScore').value || '60';
+
+        if (!title) {
+            alert('请输入培训标题');
+            document.getElementById('examQuestionBank').value = '';
+            return;
+        }
+
+        pendingExamForm = {
+            title, description, start_time, end_time, duration, pass_score: passScore,
+            learningTaskId: document.getElementById('examLearningTask').value
+        };
+
+        localStorage.setItem('pendingExamTitle', title);
+        localStorage.setItem('pendingExamDesc', description);
+        localStorage.setItem('pendingExamStartTime', start_time);
+        localStorage.setItem('pendingExamEndTime', end_time);
+        localStorage.setItem('pendingExamDuration', duration);
+        localStorage.setItem('pendingExamPassScore', passScore);
+        localStorage.setItem('pendingExamMode', 'wizard');
+
+        document.getElementById('importExamTitle').value = title;
+        document.getElementById('importExamDesc').value = description;
+        console.log('Setting questionImportModal display to flex');
+        document.getElementById('questionImportModal').style.display = 'flex';
+        console.log('questionImportModal display now:', document.getElementById('questionImportModal').style.display);
+    } else if (value) {
+        // 选择已有题库时，清除可能残留的待导入数据
+        pendingQuestionFile = null;
+        pendingQuestionData = null;
+        localStorage.removeItem('pendingQuestionTitle');
+        localStorage.removeItem('pendingQuestionDesc');
+    }
+}
+
+function onLearningTaskChangeInline(value) {
+    if (value === '__new__') {
+        pendingExamForm = {
+            title: document.getElementById('examTitle').value.trim(),
+            description: document.getElementById('examDescription').value.trim(),
+            start_time: document.getElementById('examStartTime').value,
+            end_time: document.getElementById('examEndTime').value,
+            duration: document.getElementById('examDuration').value || '60',
+            pass_score: document.getElementById('examPassScore').value || '60',
+            questionBankId: document.getElementById('examQuestionBank').value
+        };
+        hideCreateExamForm();
+        showCreateTaskModal();
+    }
+}
+
+let currentStep = 1;
+
+function showCreateExamForm() {
+    // 确保在培训任务标签页
+    switchTab('papers');
+
     currentEditingExamId = null;
+    currentStep = 1;
+    step4SelectedIds.clear();
+    const form = document.getElementById('createExamForm');
+    if (!form) return;
 
     // 刷新学习资料下拉框
     const learningTaskSelect = document.getElementById('examLearningTask');
     if (learningTaskSelect) {
-        let options = '<option value="">请选择资料</option>';
+        let options = '<option value="">请选择学习资料</option>';
         if (trainingTasks && trainingTasks.length > 0) {
             options += trainingTasks.map(t => `<option value="${t.id}">${t.title || '资料 ' + t.id}</option>`).join('');
         }
@@ -1356,60 +1702,343 @@ function showCreateExamModal() {
     const questionBankSelect = document.getElementById('examQuestionBank');
     if (questionBankSelect) {
         questionBankSelect.innerHTML = '<option value="">请选择题库</option>' +
-            papers.filter(e => !e.source_exam_id && e.question_count > 0).map(e => `<option value="${e.id}">${e.title || '试卷 ' + e.id} (${e.question_count}题)</option>`).join('') +
+            questionBanks.map(b => `<option value="${b.id}">${b.title || '题库 ' + b.id} (${b.question_count || 0}题)</option>`).join('') +
             '<option value="__new__">+ 创建新题库</option>';
     }
 
-    const modal = document.getElementById('createExamModal');
-    if (!modal) {
-        console.error('createExamModal not found');
+    // 重置表单（保持HTML默认值）
+    document.getElementById('examLearningTask').value = '';
+    document.getElementById('examQuestionBank').value = '';
+    const participantFileEl = document.getElementById('examParticipantsFile');
+    if (participantFileEl) participantFileEl.value = '';
+    const participantFileInfoEl = document.getElementById('participantFileInfo');
+    if (participantFileInfoEl) participantFileInfoEl.style.display = 'none';
+    document.getElementById('createExamResult').style.display = 'none';
+    document.getElementById('selectedLearningTask').style.display = 'none';
+    document.getElementById('selectedQuestionBank').style.display = 'none';
+
+    // 更新标题
+    const formTitle = document.getElementById('examFormTitle');
+    if (formTitle) formTitle.textContent = '新建培训';
+
+    // 初始化步骤UI
+    updateStepUI();
+
+    // 重置权限方式为"全员授权"
+    const radioAll = document.getElementById('radioAllStaff');
+    const radioManual = document.getElementById('radioManual');
+    if (radioAll) radioAll.checked = true;
+    if (radioManual) radioManual.checked = false;
+
+    // 初始化权限UI状态
+    togglePermType();
+
+    // 显示表单
+    form.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function updateStepUI() {
+    // 更新步骤指示器
+    for (let i = 1; i <= 4; i++) {
+        const stepItem = document.querySelector(`.step-item[data-step="${i}"]`);
+        if (stepItem) {
+            stepItem.classList.remove('active', 'completed');
+            if (i < currentStep) {
+                stepItem.classList.add('completed');
+            } else if (i === currentStep) {
+                stepItem.classList.add('active');
+            }
+        }
+        const stepContent = document.getElementById(`step${i}`);
+        if (stepContent) {
+            stepContent.style.display = i === currentStep ? 'block' : 'none';
+        }
+    }
+
+    // 更新按钮
+    const prevBtn = document.getElementById('prevStepBtn');
+    const nextBtn = document.getElementById('nextStepBtn');
+    const submitBtn = document.getElementById('submitExamBtn');
+    const draftBtn = document.getElementById('draftSubmitBtn');
+
+    if (prevBtn) prevBtn.style.display = currentStep > 1 ? '' : 'none';
+    if (nextBtn) nextBtn.style.display = currentStep < 4 ? '' : 'none';
+    if (submitBtn) submitBtn.style.display = currentStep === 4 ? '' : 'none';
+    if (draftBtn) draftBtn.style.display = currentStep === 4 ? 'none' : '';
+
+    // 如果进入步骤3，刷新题库下拉框
+    if (currentStep === 3) {
+        refreshQuestionBankDropdown();
+    }
+
+    // 如果进入步骤4，初始化权限UI状态
+    if (currentStep === 4) {
+        togglePermType();
+        if (document.getElementById('radioManual')?.checked && step4AllStaff.length === 0) {
+            loadStep4StaffList();
+        }
+    }
+}
+
+function refreshQuestionBankDropdown() {
+    const questionBankSelect = document.getElementById('examQuestionBank');
+    if (questionBankSelect) {
+        questionBankSelect.innerHTML = '<option value="">请选择题库</option>' +
+            questionBanks.map(b => `<option value="${b.id}">${b.title || '题库 ' + b.id} (${b.question_count || 0}题)</option>`).join('') +
+            '<option value="__new__">+ 创建新题库</option>';
+    }
+}
+
+let step4AllStaff = [];
+let step4SelectedIds = new Set();
+
+async function loadStep4StaffList() {
+    const container = document.getElementById('step4StaffList');
+    if (!container) return;
+
+    try {
+        const res = await fetch(`${API_URL}/staff?all=1`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json());
+
+        if (res.code === 0) {
+            step4AllStaff = res.data || [];
+            // 默认全选所有员工（反向选择模式）
+            step4SelectedIds.clear();
+            step4AllStaff.forEach(s => step4SelectedIds.add(s.id));
+            renderStep4StaffList('');
+        } else {
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-soft);">加载失败</div>';
+        }
+    } catch (err) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-soft);">加载失败</div>';
+    }
+}
+
+function renderStep4StaffList(filter) {
+    const container = document.getElementById('step4StaffList');
+    if (!container) return;
+
+    const filtered = step4AllStaff.filter(s => {
+        if (!filter) return true;
+        const f = filter.toLowerCase();
+        return (s.name || '').toLowerCase().includes(f) ||
+               (s.employee_id || '').toLowerCase().includes(f);
+    });
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-soft);">无匹配员工</div>';
         return;
     }
-    modal.style.display = 'flex';
 
-    // 恢复弹窗标题
-    const modalTitle = document.querySelector('#createExamModal .modal-title');
-    if (modalTitle) {
-        modalTitle.textContent = '+ 新建培训';
+    // 按部门分组
+    const deptMap = {};
+    filtered.forEach(s => {
+        const dept = s.department || '未分组';
+        if (!deptMap[dept]) deptMap[dept] = [];
+        deptMap[dept].push(s);
+    });
+
+    const depts = Object.keys(deptMap).sort();
+    container.innerHTML = depts.map(dept => {
+        const staff = deptMap[dept];
+        return `
+            <div style="margin-bottom:12px;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-soft);padding:4px 0;border-bottom:1px solid var(--border);margin-bottom:6px;">${dept}</div>
+                ${staff.map(s => `
+                    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+                        <input type="checkbox" id="step4_staff_${s.id}" value="${s.id}"
+                            ${step4SelectedIds.has(s.id) ? 'checked' : ''}
+                            onchange="toggleStep4Staff(${s.id})"
+                            style="width:16px;height:16px;">
+                        <span style="font-size:13px;">${s.name || '-'}</span>
+                        <span style="font-size:11px;color:var(--text-soft);">${s.employee_id || ''}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }).join('');
+
+    document.getElementById('step4SelectedCount').textContent = step4SelectedIds.size;
+    document.getElementById('step4TotalCount').textContent = step4AllStaff.length;
+}
+
+function toggleStep4Staff(id) {
+    if (step4SelectedIds.has(id)) {
+        step4SelectedIds.delete(id);
+    } else {
+        step4SelectedIds.add(id);
+    }
+    document.getElementById('step4SelectedCount').textContent = step4SelectedIds.size;
+}
+
+function togglePermType() {
+    const radioAll = document.getElementById('radioAllStaff');
+    const radioManual = document.getElementById('radioManual');
+    const manualSection = document.getElementById('manualPermSection');
+    const radioAllLabel = document.getElementById('radioAllStaffLabel');
+    const radioManualLabel = document.getElementById('radioManualLabel');
+
+    // 如果元素不存在，直接返回
+    if (!radioAll || !radioManual || !manualSection || !radioAllLabel || !radioManualLabel) {
+        return;
     }
 
-    // 恢复提交按钮文字
-    const submitBtn = document.getElementById('examSubmitBtn');
-    if (submitBtn) {
-        submitBtn.textContent = '创建';
+    const isAll = radioAll.checked;
+
+    if (isAll) {
+        manualSection.style.display = 'none';
+        radioAllLabel.style.borderColor = 'var(--primary)';
+        radioAllLabel.style.background = 'rgba(74,144,226,0.08)';
+        radioManualLabel.style.borderColor = 'var(--border)';
+        radioManualLabel.style.background = 'var(--bg)';
+    } else {
+        manualSection.style.display = 'block';
+        radioManualLabel.style.borderColor = 'var(--primary)';
+        radioManualLabel.style.background = 'rgba(74,144,226,0.08)';
+        radioAllLabel.style.borderColor = 'var(--border)';
+        radioAllLabel.style.background = 'var(--bg)';
+        // 加载员工列表
+        if (step4AllStaff.length === 0) {
+            loadStep4StaffList();
+        }
     }
+}
 
-    const setValue = (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.value = value;
-    };
-    const setDisplay = (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = value;
-    };
+function filterStaffList(filter) {
+    renderStep4StaffList(filter);
+}
 
-    setValue('examTitle', '');
-    setValue('examDescription', '');
-    setValue('examDuration', '60');
-    setValue('examPassScore', '60');
-    setValue('examParticipantsFile', '');
-    setDisplay('participantFileInfo', 'none');
-    setDisplay('createExamResult', 'none');
+function selectAllStep4Staff() {
+    step4AllStaff.forEach(s => step4SelectedIds.add(s.id));
+    renderStep4StaffList(document.getElementById('staffSearchInput')?.value || '');
+}
+
+function deselectAllStep4Staff() {
+    step4SelectedIds.clear();
+    renderStep4StaffList(document.getElementById('staffSearchInput')?.value || '');
+}
+
+// 部门选择弹窗
+function showDeptSelectModal() {
+    const modal = document.getElementById('deptSelectModal');
+    const container = document.getElementById('deptCheckboxes');
+
+    // 获取所有部门
+    const deptMap = {};
+    step4AllStaff.forEach(s => {
+        const dept = s.department || '未分组';
+        if (!deptMap[dept]) deptMap[dept] = [];
+        deptMap[dept].push(s);
+    });
+
+    const depts = Object.keys(deptMap).sort();
+    container.innerHTML = depts.map(dept => `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <input type="checkbox" id="dept_${dept}" value="${dept}" onchange="toggleDeptSelect('${dept}')" style="width:16px;height:16px;">
+            <label for="dept_${dept}" style="flex:1;cursor:pointer;">${dept}</label>
+            <span style="font-size:11px;color:var(--text-muted);">${deptMap[dept].length}人</span>
+        </div>
+    `).join('');
+
+    modal.classList.add('active');
+}
+
+function closeDeptSelectModal() {
+    document.getElementById('deptSelectModal').classList.remove('active');
+}
+
+function toggleDeptSelect(dept) {
+    // This is just for visual feedback, the actual selection happens in confirmDeptSelect
+}
+
+function confirmDeptSelect() {
+    const checkboxes = document.querySelectorAll('#deptCheckboxes input[type="checkbox"]');
+    const selectedDepts = [];
+    checkboxes.forEach(cb => {
+        if (cb.checked) {
+            selectedDepts.push(cb.value);
+        }
+    });
+
+    // 选中所有属于所选部门的员工
+    step4AllStaff.forEach(s => {
+        const dept = s.department || '未分组';
+        if (selectedDepts.includes(dept)) {
+            step4SelectedIds.add(s.id);
+        }
+    });
+
+    closeDeptSelectModal();
+    renderStep4StaffList(document.getElementById('staffSearchInput')?.value || '');
+}
+
+function validateStep1() {
+    const title = document.getElementById('examTitle').value.trim();
+    const startTime = document.getElementById('examStartTime').value;
+    const endTime = document.getElementById('examEndTime').value;
+    const duration = document.getElementById('examDuration').value;
+    const passScore = document.getElementById('examPassScore').value;
+
+    if (!title) { alert('请输入培训标题'); return false; }
+    if (!startTime) { alert('请选择培训开始时间'); return false; }
+    if (!endTime) { alert('请选择培训结束时间'); return false; }
+    if (new Date(startTime) >= new Date(endTime)) { alert('培训结束时间必须晚于开始时间'); return false; }
+    if (!duration || duration < 1) { alert('请输入有效的考试时长'); return false; }
+    if (!passScore || passScore < 1 || passScore > 100) { alert('请输入有效的及格分数(1-100)'); return false; }
+    return true;
+}
+
+function nextStep() {
+    console.log('nextStep called, currentStep=', currentStep);
+    if (currentStep === 1) {
+        if (!validateStep1()) return;
+    }
+    if (currentStep < 4) {
+        currentStep++;
+        console.log('nextStep: after increment currentStep=', currentStep, 'step4 display=', document.getElementById('step4')?.style.display);
+        updateStepUI();
+        console.log('nextStep: after updateStepUI step4 display=', document.getElementById('step4')?.style.display);
+    } else {
+        console.log('nextStep: currentStep >= 4, not incrementing');
+    }
+}
+
+function prevStep() {
+    if (currentStep > 1) {
+        currentStep--;
+        updateStepUI();
+    }
+}
+
+function hideCreateExamForm() {
+    const form = document.getElementById('createExamForm');
+    if (form) form.style.display = 'none';
+    currentStep = 1;
+    step4SelectedIds.clear();
+}
+
+function showCreateExamModal() {
+    showCreateExamForm();
 }
 
 function closeCreateExamModal() {
-    document.getElementById('createExamModal').style.display = 'none';
+    hideCreateExamForm();
     currentEditingExamId = null;
 }
 
 async function draftExam() {
     const title = document.getElementById('examTitle').value.trim();
     const description = document.getElementById('examDescription').value.trim();
+    const start_time = document.getElementById('examStartTime').value || null;
+    const end_time = document.getElementById('examEndTime').value || null;
     const duration = parseInt(document.getElementById('examDuration').value) || 60;
     const pass_score = parseInt(document.getElementById('examPassScore').value) || 60;
     const questionBankId = document.getElementById('examQuestionBank').value;
     const learningTaskId = document.getElementById('examLearningTask').value;
-    const participantFile = document.getElementById('examParticipantsFile').files[0];
+    const participantFileEl = document.getElementById('examParticipantsFile');
+    const participantFile = participantFileEl ? participantFileEl.files[0] : null;
 
     if (!title) {
         alert('请输入培训标题');
@@ -1419,7 +2048,7 @@ async function draftExam() {
     const resultEl = document.getElementById('createExamResult');
 
     try {
-        const res = await fetch(`${API_URL}/exam-admin/paper`, {
+        const res = await fetch(`${API_URL}/exam-trainings`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -1428,10 +2057,12 @@ async function draftExam() {
             body: JSON.stringify({
                 title,
                 description,
+                start_time,
+                end_time,
                 duration,
                 pass_score,
                 is_active: false,
-                source_exam_id: questionBankId && questionBankId !== '__new__' ? questionBankId : null,
+                question_bank_id: questionBankId && questionBankId !== '__new__' ? parseInt(questionBankId) : null,
                 learning_task_id: learningTaskId && learningTaskId !== '__new__' ? parseInt(learningTaskId) : null
             })
         }).then(r => r.json());
@@ -1440,13 +2071,26 @@ async function draftExam() {
             resultEl.className = 'import-result success';
             resultEl.textContent = '已暂存！';
             resultEl.style.display = 'block';
-            closeCreateExamModal();
-            loadData();
+
+            // 保存第四步选择的员工权限
+            if (step4SelectedIds.size > 0) {
+                await fetch(`${API_URL}/exam-trainings/${res.data.id}/permissions`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ staff_ids: [...step4SelectedIds] })
+                });
+            }
 
             // 如果上传了人员文件，导入人员
             if (participantFile) {
                 await importParticipants(res.data.id, participantFile);
             }
+
+            closeCreateExamModal();
+            loadData();
         } else {
             resultEl.className = 'import-result error';
             resultEl.textContent = res.msg || '暂存失败';
@@ -1460,41 +2104,30 @@ async function draftExam() {
 async function createExam() {
     const title = document.getElementById('examTitle').value.trim();
     const description = document.getElementById('examDescription').value.trim();
+    const start_time = document.getElementById('examStartTime').value || null;
+    const end_time = document.getElementById('examEndTime').value || null;
     const duration = parseInt(document.getElementById('examDuration').value) || 60;
     const pass_score = parseInt(document.getElementById('examPassScore').value) || 60;
     const questionBankId = document.getElementById('examQuestionBank').value;
     const learningTaskId = document.getElementById('examLearningTask').value;
-    const participantFile = document.getElementById('examParticipantsFile').files[0];
+    const participantFileEl = document.getElementById('examParticipantsFile');
+    const participantFile = participantFileEl ? participantFileEl.files[0] : null;
 
     if (!title) {
         alert('请输入培训标题');
         return;
     }
 
-    if (!learningTaskId || learningTaskId === '__new__') {
-        alert('请选择学习资料');
-        return;
-    }
-
-    if (!questionBankId || questionBankId === '__new__') {
-        alert('请选择题库');
-        return;
-    }
-
-    // 如果选择创建新题库，先打开导入弹窗，创建考试移到导入成功后
+    // 如果选择创建新题库，先打开导入弹窗
     if (questionBankId === '__new__') {
-        if (!title) {
-            alert('请输入培训标题');
-            return;
-        }
-        // 保存表单信息到localStorage
         localStorage.setItem('pendingExamTitle', title);
         localStorage.setItem('pendingExamDesc', description);
+        localStorage.setItem('pendingExamStartTime', start_time);
+        localStorage.setItem('pendingExamEndTime', end_time);
         localStorage.setItem('pendingExamDuration', duration);
         localStorage.setItem('pendingExamPassScore', pass_score);
         localStorage.setItem('pendingLearningTaskId', learningTaskId);
 
-        // 打开导入弹窗
         document.getElementById('importExamTitle').value = title;
         document.getElementById('importExamDesc').value = description;
         document.getElementById('questionImportModal').style.display = 'flex';
@@ -1506,16 +2139,21 @@ async function createExam() {
     try {
         let res;
         let successMsg = '';
+        let newExam = null;
 
         // 如果是编辑模式，更新现有考试
         if (currentEditingExamId) {
-            res = await fetch(`${API_URL}/exam-admin/paper/${currentEditingExamId}`, {
+            res = await fetch(`${API_URL}/exam-trainings/${currentEditingExamId}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ title, description, duration, pass_score })
+                body: JSON.stringify({
+                    title, description, start_time, end_time, duration, pass_score,
+                    learning_task_id: learningTaskId && learningTaskId !== '__new__' ? parseInt(learningTaskId) : null,
+                    question_bank_id: questionBankId && questionBankId !== '__new__' ? parseInt(questionBankId) : null
+                })
             }).then(r => r.json());
 
             if (res.code !== 0) {
@@ -1527,19 +2165,16 @@ async function createExam() {
             successMsg = '考试设置已保存！';
         } else {
             // 创建新培训
-            res = await fetch(`${API_URL}/exam-admin/paper`, {
+            res = await fetch(`${API_URL}/exam-trainings`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    title,
-                    description,
-                    duration,
-                    pass_score,
+                    title, description, start_time, end_time, duration, pass_score,
                     is_active: false,
-                    source_exam_id: questionBankId && questionBankId !== '__new__' ? questionBankId : null,
+                    question_bank_id: questionBankId && questionBankId !== '__new__' ? parseInt(questionBankId) : null,
                     learning_task_id: learningTaskId && learningTaskId !== '__new__' ? parseInt(learningTaskId) : null
                 })
             }).then(r => r.json());
@@ -1551,11 +2186,28 @@ async function createExam() {
                 return;
             }
 
-            const newExam = res.data;
+            newExam = res.data;
             successMsg = '考试创建成功！';
 
-            // 选择已有题库时直接复用，不复制题目
-            // 选择创建新题库时已在上面处理
+            // 如果有待导入的题库，先导入题库
+            if (pendingQuestionFile || pendingQuestionData) {
+                const examId = newExam.id;
+                let qRes;
+                if (pendingQuestionFile) {
+                    qRes = await importQuestionsAPI(pendingQuestionFile, examId);
+                } else {
+                    qRes = await importQuestionsAPI(pendingQuestionData, examId);
+                }
+                if (qRes.code === 0) {
+                    const qCount = qRes.data?.questionCount || qRes.data?.count || 0;
+                    successMsg += `，已导入 ${qCount} 题`;
+                }
+                // 清除待导入数据
+                pendingQuestionFile = null;
+                pendingQuestionData = null;
+                localStorage.removeItem('pendingQuestionTitle');
+                localStorage.removeItem('pendingQuestionDesc');
+            }
         }
 
         // 如果上传了人员文件，导入人员
@@ -1564,11 +2216,57 @@ async function createExam() {
             successMsg += ' 已导入考试人员';
         }
 
+        // 保存第四步选择的员工权限
+        const examId = newExam ? newExam.id : currentEditingExamId;
+        const isAllStaff = document.getElementById('radioAllStaff')?.checked;
+
+        if (isAllStaff) {
+            // 全员授权：保存所有员工
+            if (step4AllStaff.length === 0) {
+                // 如果还没加载员工列表，先获取
+                const staffRes = await fetch(`${API_URL}/staff?limit=10000`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).then(r => r.json());
+                step4AllStaff = staffRes.data || [];
+            }
+            const permRes = await fetch(`${API_URL}/exam-trainings/${examId}/permissions`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ staff_ids: step4AllStaff.map(s => s.id) })
+            }).then(r => r.json());
+
+            if (permRes.code !== 0) {
+                resultEl.className = 'import-result error';
+                resultEl.textContent = '保存权限失败: ' + (permRes.msg || '未知错误');
+                resultEl.style.display = 'block';
+                return;
+            }
+        } else if (step4SelectedIds.size > 0) {
+            // 手动选择：保存选中的员工
+            const permRes = await fetch(`${API_URL}/exam-trainings/${examId}/permissions`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ staff_ids: [...step4SelectedIds] })
+            }).then(r => r.json());
+
+            if (permRes.code !== 0) {
+                resultEl.className = 'import-result error';
+                resultEl.textContent = '保存权限失败: ' + (permRes.msg || '未知错误');
+                resultEl.style.display = 'block';
+                return;
+            }
+        }
+
         resultEl.className = 'import-result success';
         resultEl.textContent = successMsg;
         resultEl.style.display = 'block';
 
-        // 清除编辑状态
         currentEditingExamId = null;
 
         setTimeout(() => {
@@ -1576,13 +2274,16 @@ async function createExam() {
             loadData();
         }, 1500);
     } catch (err) {
-        alert('操作失败');
+        console.error('创建培训失败:', err);
+        resultEl.className = 'import-result error';
+        resultEl.textContent = '操作失败: ' + (err.message || String(err));
+        resultEl.style.display = 'block';
     }
 }
 
 async function copyQuestionsFromBank(sourceExamId, targetExamId) {
     try {
-        await fetch(`${API_URL}/exam-admin/paper/${sourceExamId}/copy-questions`, {
+        await fetch(`${API_URL}/exam-trainings/${sourceExamId}/copy-questions`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -1598,10 +2299,9 @@ async function copyQuestionsFromBank(sourceExamId, targetExamId) {
 async function importParticipants(examId, file) {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('examId', examId);
 
     try {
-        const res = await fetch(`${API_URL}/exam-admin/import-participants`, {
+        const res = await fetch(`${API_URL}/exam-trainings/${examId}/import-participants`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
@@ -1631,7 +2331,7 @@ async function toggleExamStatus(examId, currentStatus, currentTaskId) {
             return;
         }
         try {
-            const res = await fetch(`${API_URL}/exam-admin/paper/${examId}`, {
+            const res = await fetch(`${API_URL}/exam-trainings/${examId}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -1659,7 +2359,7 @@ async function toggleExamStatus(examId, currentStatus, currentTaskId) {
 
         // 检查是否配置了考试人员权限
         try {
-            const permRes = await fetch(`${API_URL}/exam-admin/paper/${examId}/permissions`, {
+            const permRes = await fetch(`${API_URL}/exam-trainings/${examId}/permissions`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             }).then(r => r.json());
 
@@ -1679,6 +2379,9 @@ async function toggleExamStatus(examId, currentStatus, currentTaskId) {
 }
 
 // 查看考试人员权限
+let currentPermExamId = null;
+let allStaffForPerm = [];
+
 async function viewExamPermissions(examId) {
     const targetExamId = examId || currentEditingExamId;
     if (!targetExamId) {
@@ -1686,8 +2389,10 @@ async function viewExamPermissions(examId) {
         return;
     }
 
+    currentPermExamId = targetExamId;
+
     try {
-        const res = await fetch(`${API_URL}/exam-admin/paper/${targetExamId}/permissions`, {
+        const res = await fetch(`${API_URL}/exam-trainings/${targetExamId}/permissions`, {
             headers: { 'Authorization': `Bearer ${token}` }
         }).then(r => r.json());
 
@@ -1696,48 +2401,77 @@ async function viewExamPermissions(examId) {
             return;
         }
 
-        const permissions = res.data || [];
-        showPermissionsModal(permissions);
+        allStaffForPerm = res.data || [];
+        showPermissionsModal(allStaffForPerm);
     } catch (err) {
         alert('获取权限失败');
     }
 }
 
-function showPermissionsModal(permissions) {
+function showPermissionsModal(staffList) {
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.id = 'permissionsModal';
     modal.style.cssText = 'position:fixed;z-index:2000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
 
-    const listHtml = permissions.length === 0
-        ? '<div style="text-align:center;padding:40px;color:var(--text-secondary);">暂无配置人员</div>'
-        : `<table style="width:100%;border-collapse:collapse;">
-            <thead>
-                <tr style="background:var(--bg-surface);">
-                    <th style="padding:10px;border-bottom:1px solid var(--border);text-align:left;">工号</th>
-                    <th style="padding:10px;border-bottom:1px solid var(--border);text-align:left;">姓名</th>
-                    <th style="padding:10px;border-bottom:1px solid var(--border);text-align:left;">状态</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${permissions.map(p => `
-                    <tr>
-                        <td style="padding:10px;border-bottom:1px solid var(--border);">${p.employee_id || '-'}</td>
-                        <td style="padding:10px;border-bottom:1px solid var(--border);">${p.name || '-'}</td>
-                        <td style="padding:10px;border-bottom:1px solid var(--border);"><span class="badge ${p.can_take ? 'badge-success' : 'badge-danger'}">${p.can_take ? '已授权' : '未授权'}</span></td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>`;
+    // 按部门分组
+    const deptMap = {};
+    staffList.forEach(s => {
+        const dept = s.department || '未分组';
+        if (!deptMap[dept]) deptMap[dept] = [];
+        deptMap[dept].push(s);
+    });
+
+    const depts = Object.keys(deptMap).sort();
+    const selectedCount = staffList.filter(s => s.has_perm).length;
+
+    const listHtml = depts.map(dept => {
+        const staff = deptMap[dept];
+        const deptSelected = staff.filter(s => s.has_perm).length;
+        return `
+            <div style="margin-bottom:12px;">
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+                    <input type="checkbox" id="dept_${dept.replace(/\s/g, '_')}"
+                        ${deptSelected === staff.length ? 'checked' : ''}
+                        onchange="toggleDept('${dept.replace(/'/g, "\\'")}', this.checked)">
+                    <span style="font-weight:600;">${dept}</span>
+                    <span style="color:var(--text-secondary);font-size:12px;">(${deptSelected}/${staff.length})</span>
+                </div>
+                <div style="padding-left:24px;">
+                    ${staff.map(s => `
+                        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
+                            <input type="checkbox" class="perm-staff-cb" data-staff-id="${s.id}"
+                                ${s.has_perm ? 'checked' : ''}
+                                onchange="updateDeptCheckbox('${dept.replace(/'/g, "\\'")}')">
+                            <span style="font-size:13px;">${s.name}</span>
+                            <span style="color:var(--text-secondary);font-size:12px;">${s.employee_id}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
 
     modal.innerHTML = `
-        <div style="background:var(--bg-card);border-radius:var(--radius-lg);padding:24px;width:90%;max-width:600px;max-height:80vh;overflow-y:auto;">
+        <div style="background:var(--bg-card);border-radius:var(--radius-lg);padding:24px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <div style="font-size:18px;font-weight:700;">已配置考试人员（${permissions.length}人）</div>
+                <div style="font-size:18px;font-weight:700;">授权考试人员 (<span id="permSelectedCount">${selectedCount}</span>/<span id="permTotalCount">${staffList.length}</span>)</div>
                 <button onclick="closePermissionsModal()" style="border:none;background:none;font-size:24px;cursor:pointer;">×</button>
             </div>
-            <div style="max-height:400px;overflow-y:auto;">
-                ${listHtml}
+
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <button class="btn btn-sm btn-secondary" onclick="selectAllPerm()">全选</button>
+                <button class="btn btn-sm btn-secondary" onclick="deselectAllPerm()">全取消</button>
+                <button class="btn btn-sm btn-primary" onclick="showDeptSelectModal()">按部门选择</button>
+            </div>
+
+            <div style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:12px;">
+                ${staffList.length === 0 ? '<div style="text-align:center;padding:40px;color:var(--text-secondary);">暂无员工数据</div>' : listHtml}
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:16px;">
+                <button class="btn btn-primary btn-sm" onclick="savePermissions()" style="flex:1;">保存</button>
+                <button class="btn btn-secondary btn-sm" onclick="closePermissionsModal()" style="flex:1;">取消</button>
             </div>
         </div>
     `;
@@ -1745,8 +2479,145 @@ function showPermissionsModal(permissions) {
     document.body.appendChild(modal);
 }
 
+function toggleDept(dept, checked) {
+    document.querySelectorAll('.perm-staff-cb').forEach(cb => {
+        const staffId = parseInt(cb.dataset.staffId);
+        const staff = allStaffForPerm.find(s => s.id === staffId);
+        if (staff && staff.department === dept) {
+            cb.checked = checked;
+        }
+    });
+    updateSelectedCount();
+}
+
+function updateDeptCheckbox(dept) {
+    const staff = allStaffForPerm.filter(s => s.department === dept);
+    const allChecked = staff.every(s => {
+        const cb = document.querySelector(`.perm-staff-cb[data-staff-id="${s.id}"]`);
+        return cb && cb.checked;
+    });
+    const deptCheckbox = document.getElementById('dept_' + dept.replace(/\s/g, '_'));
+    if (deptCheckbox) deptCheckbox.checked = allChecked;
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const checked = document.querySelectorAll('.perm-staff-cb:checked').length;
+    document.getElementById('permSelectedCount').textContent = checked;
+}
+
+function selectAllPerm() {
+    document.querySelectorAll('.perm-staff-cb').forEach(cb => cb.checked = true);
+    document.querySelectorAll('input[id^="dept_"]').forEach(cb => cb.checked = true);
+    updateSelectedCount();
+}
+
+function deselectAllPerm() {
+    document.querySelectorAll('.perm-staff-cb').forEach(cb => cb.checked = false);
+    document.querySelectorAll('input[id^="dept_"]').forEach(cb => cb.checked = false);
+    updateSelectedCount();
+}
+
+async function savePermissions() {
+    const checkedStaffIds = [];
+    document.querySelectorAll('.perm-staff-cb:checked').forEach(cb => {
+        checkedStaffIds.push(parseInt(cb.dataset.staffId));
+    });
+
+    try {
+        const res = await fetch(`${API_URL}/exam-trainings/${currentPermExamId}/permissions`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ staff_ids: checkedStaffIds })
+        }).then(r => r.json());
+
+        if (res.code === 0) {
+            alert('权限已保存');
+            closePermissionsModal();
+        } else {
+            alert(res.msg || '保存失败');
+        }
+    } catch (err) {
+        alert('保存失败');
+    }
+}
+
 function closePermissionsModal() {
     const modal = document.getElementById('permissionsModal');
+    if (modal) modal.remove();
+    allStaffForPerm = [];
+    currentPermExamId = null;
+}
+
+// 部门选择弹窗
+function showDeptSelectModal() {
+    const depts = [...new Set(allStaffForPerm.map(s => s.department || '未分组'))].sort();
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'deptSelectModal';
+    modal.style.cssText = 'position:fixed;z-index:3000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
+
+    modal.innerHTML = `
+        <div style="background:var(--bg-card);border-radius:var(--radius-lg);padding:24px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div style="font-size:18px;font-weight:700;">选择部门</div>
+                <button onclick="closeDeptSelectModal()" style="border:none;background:none;font-size:24px;cursor:pointer;">×</button>
+            </div>
+
+            <div style="max-height:400px;overflow-y:auto;">
+                ${depts.map(dept => {
+                    const count = allStaffForPerm.filter(s => (s.department || '未分组') === dept).length;
+                    return `
+                        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+                            <input type="checkbox" id="dept_sel_${dept.replace(/\s/g, '_')}" onchange="toggleDeptSelection('${dept.replace(/'/g, "\\'")}', this.checked)">
+                            <span style="flex:1;">${dept}</span>
+                            <span style="color:var(--text-secondary);font-size:12px;">${count}人</span>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:16px;">
+                <button class="btn btn-primary btn-sm" onclick="confirmDeptSelection()" style="flex:1;">确认</button>
+                <button class="btn btn-secondary btn-sm" onclick="closeDeptSelectModal()" style="flex:1;">取消</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+}
+
+function toggleDeptSelection(dept, checked) {
+    allStaffForPerm.forEach(s => {
+        if ((s.department || '未分组') === dept) {
+            const cb = document.querySelector(`.perm-staff-cb[data-staff-id="${s.id}"]`);
+            if (cb) cb.checked = checked;
+        }
+    });
+}
+
+function confirmDeptSelection() {
+    document.querySelectorAll('input[id^="dept_sel_"]').forEach(deptCb => {
+        if (deptCb.checked) {
+            const dept = deptCb.id.replace('dept_sel_', '').replace(/_/g, ' ');
+            allStaffForPerm.forEach(s => {
+                if ((s.department || '未分组') === dept) {
+                    const cb = document.querySelector(`.perm-staff-cb[data-staff-id="${s.id}"]`);
+                    if (cb) cb.checked = true;
+                }
+            });
+        }
+    });
+    closeDeptSelectModal();
+    updateSelectedCount();
+}
+
+function closeDeptSelectModal() {
+    const modal = document.getElementById('deptSelectModal');
     if (modal) modal.remove();
 }
 
@@ -1821,7 +2692,7 @@ async function confirmEnableExam() {
     const learningTaskId = taskId === '0' ? null : parseInt(taskId);
 
     try {
-        const res = await fetch(`${API_URL}/exam-admin/paper/${currentToggleExamId}`, {
+        const res = await fetch(`${API_URL}/exam-trainings/${currentToggleExamId}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -1859,7 +2730,7 @@ async function showTrainingRecordDetail(taskId) {
         }
 
         const taskDetail = res.data;
-        const { stats, usersWithProgress, exam } = taskDetail;
+        const { stats, users, exam } = taskDetail;
 
         document.getElementById('trainingRecordModalTitle').textContent = task.task_title || '培训任务详情';
 
@@ -1927,7 +2798,7 @@ async function showTrainingRecordDetail(taskId) {
                             </tr>
                         </thead>
                         <tbody>
-                            ${(usersWithProgress || []).map(u => {
+                            ${(users || []).map(u => {
                                 const prog = u.progress?.progress_percent || 0;
                                 const st = u.progress?.status || 'not_started';
                                 const stClass = st === 'completed' ? 'badge-success' : (st === 'in_progress' ? 'badge-warning' : 'badge-secondary');

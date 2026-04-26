@@ -6,19 +6,19 @@ const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 // ============ 考试权限 API ============
 
-// GET /api/permissions/exams - 获取所有考试及其权限状态
+// GET /api/permissions/exams - 获取所有培训及其权限状态
 router.get('/exams', authMiddleware, (req, res) => {
     try {
-        const exams = db.prepare(`
-            SELECT e.*,
-                (SELECT COUNT(*) FROM exam_permissions ep WHERE ep.exam_id = e.id AND ep.can_take = 1) as perm_count
-            FROM exams e
-            ORDER BY e.created_at DESC
+        const trainings = db.prepare(`
+            SELECT et.*,
+                (SELECT COUNT(*) FROM exam_permissions ep WHERE ep.exam_id = et.id AND ep.can_take = 1) as perm_count
+            FROM exam_trainings et
+            ORDER BY et.created_at DESC
         `).all();
 
-        res.json({ code: 0, data: exams });
+        res.json({ code: 0, data: trainings });
     } catch (err) {
-        console.error('获取考试列表失败:', err);
+        console.error('获取培训列表失败:', err);
         res.status(500).json({ code: -1, msg: '服务器错误' });
     }
 });
@@ -82,10 +82,10 @@ router.post('/exams/batch', authMiddleware, adminMiddleware, (req, res) => {
             return res.status(400).json({ code: -1, msg: '参数错误' });
         }
 
-        // 获取所有考试
-        const exams = db.prepare('SELECT id FROM exams').all();
-        if (exams.length === 0) {
-            return res.json({ code: 0, msg: '没有考试', data: { success: 0, fail: data.length, errors: [] } });
+        // 获取所有培训
+        const trainings = db.prepare('SELECT id FROM exam_trainings').all();
+        if (trainings.length === 0) {
+            return res.json({ code: 0, msg: '没有培训', data: { success: 0, fail: data.length, errors: [] } });
         }
 
         // 获取所有有效员工工号
@@ -114,10 +114,10 @@ router.post('/exams/batch', authMiddleware, adminMiddleware, (req, res) => {
                 continue;
             }
 
-            // 给该员工分配所有考试权限
-            for (const exam of exams) {
+            // 给该员工分配所有培训权限
+            for (const training of trainings) {
                 try {
-                    insertStmt.run(exam.id, item.employee_id);
+                    insertStmt.run(training.id, item.employee_id);
                     success++;
                 } catch (e) {
                     // 忽略重复插入错误
@@ -596,7 +596,7 @@ router.get('/learning-materials', authMiddleware, (req, res) => {
                 e.id as exam_id, e.title as exam_title,
                 CASE WHEN ep.id IS NOT NULL THEN 1 ELSE 0 END as has_perm
             FROM learning_tasks lt
-            LEFT JOIN exams e ON e.learning_task_id = lt.id
+            LEFT JOIN exam_trainings e ON e.learning_task_id = lt.id
             LEFT JOIN exam_permissions ep ON e.id = ep.exam_id AND ep.staff_id = ? AND ep.can_take = 1
             ORDER BY lt.created_at DESC
         `).all(staffId);

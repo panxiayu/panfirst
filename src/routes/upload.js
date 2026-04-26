@@ -68,67 +68,100 @@ const learningUpload = multer({
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 // POST /api/import/upload
-// 上传文件并提取文本内容
+// 上传文件并导入题目到题库（支持文件上传或文本直接导入）
 router.post('/upload', authMiddleware, adminMiddleware, upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({
-        code: -1,
-        msg: '未上传文件',
-        data: null
-      });
+    let text = '';
+    let paperId = req.body.paperId || '';
+    const paperTitle = req.body.paperTitle;
+
+    // 文件上传模式
+    if (req.file) {
+      const filePath = req.file.path;
+      const ext = path.extname(req.file.originalname).toLowerCase();
+
+      if (ext === '.txt') {
+        text = fs.readFileSync(filePath, 'utf-8');
+      } else if (ext === '.docx' || ext === '.doc') {
+        try {
+          if (ext === '.docx') {
+            const result = await mammoth.extractRawText({ path: filePath });
+            text = result.value;
+          } else if (ext === '.doc') {
+            const result = spawnSync('antiword', ['-m', 'UTF-8', filePath]);
+            if (result.error) throw result.error;
+            if (result.status !== 0) throw new Error(result.stderr ? result.stderr.toString() : 'antiword 解析失败');
+            text = result.stdout.toString('utf-8');
+          }
+        } catch (err) {
+          console.error('解析失败:', err);
+          try { fs.unlinkSync(filePath); } catch(e) {}
+          return res.status(400).json({ code: -1, msg: '解析文件失败：' + err.message, data: null });
+        }
+      }
+      try { fs.unlinkSync(filePath); } catch(e) {}
+    }
+    // 文本直接上传模式
+    else if (req.body.text) {
+      text = req.body.text;
+    }
+    else {
+      return res.status(400).json({ code: -1, msg: '请上传文件或输入题目文本', data: null });
     }
 
-    const filePath = req.file.path;
-    const ext = path.extname(req.file.originalname).toLowerCase();
-    let text = '';
+    if (!text.trim()) {
+      return res.status(400).json({ code: -1, msg: '题目内容为空', data: null });
+    }
 
-    if (ext === '.txt') {
-      text = fs.readFileSync(filePath, 'utf-8');
-    } else if (ext === '.docx' || ext === '.doc') {
+    // 如果没有指定 paperId，但有 paperTitle，则创建新题库
+    if (!paperId && paperTitle) {
+      const result = db.prepare(`
+        INSERT INTO exam_banks (title, description, created_by)
+        VALUES (?, ?, ?)
+      `).run(paperTitle, '', req.user.userId);
+      paperId = result.lastInsertRowid;
+    }
+
+    if (!paperId) {
+      return res.status(400).json({ code: -1, msg: '请指定题库ID', data: null });
+    }
+
+    // 验证题库存在
+    const bank = db.prepare('SELECT id FROM exam_banks WHERE id = ?').get(paperId);
+    if (!bank) {
+      return res.status(400).json({ code: -1, msg: '题库不存在', data: null });
+    }
+
+    // 解析并导入题目
+    const wordParser = require('../utils/wordParser');
+    const parseResult = wordParser.parse(text);
+    const questions = parseResult.questions;
+
+    if (questions.length === 0) {
+      return res.status(400).json({ code: -1, msg: '未识别到题目', data: null });
+    }
+
+    let successCount = 0;
+    for (const q of questions) {
       try {
-        if (ext === '.docx') {
-          const result = await mammoth.extractRawText({ path: filePath });
-          text = result.value;
-        } else if (ext === '.doc') {
-          // 使用 antiword 解析 .doc 文件
-          const result = spawnSync('antiword', ['-m', 'UTF-8', filePath]);
-          if (result.error) {
-            throw result.error;
-          }
-          if (result.status !== 0) {
-            throw new Error(result.stderr ? result.stderr.toString() : 'antiword 解析失败');
-          }
-          text = result.stdout.toString('utf-8');
-        }
+        db.prepare(
+          `INSERT INTO questions (exam_id, type, content, options, answer, score, sort_order)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).run(paperId, q.type, q.content, JSON.stringify(q.options), q.answer, q.score, q.sort_order || 0);
+        successCount++;
       } catch (err) {
-        console.error('解析失败:', err);
-        return res.status(400).json({
-          code: -1,
-          msg: '解析文件失败：' + err.message,
-          data: null
-        });
+        console.error('插入题目失败:', err);
       }
     }
-
-    fs.unlinkSync(filePath);
 
     res.json({
       code: 0,
-      msg: '文件解析成功',
-      data: {
-        text,
-        filename: req.file.originalname,
-        size: req.file.size
-      }
+      msg: '导入成功',
+      data: { questionCount: successCount, paperId: paperId }
     });
   } catch (err) {
-    console.error('文件上传失败:', err);
-    res.status(500).json({
-      code: -1,
-      msg: '文件上传失败：' + err.message,
-      data: null
-    });
+    console.error('导入失败:', err);
+    res.status(500).json({ code: -1, msg: '导入失败：' + err.message, data: null });
   }
 });
 
@@ -162,12 +195,33 @@ router.post('/learning/upload', authMiddleware, adminMiddleware, learningUpload.
       });
     }
 
+    // 使用 ffprobe 提取视频时长
+    let duration = null;
+    try {
+      const { spawnSync } = require('child_process');
+      const ffprobeResult = spawnSync('ffprobe', [
+        '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        finalFilePath
+      ]);
+      if (ffprobeResult.error) {
+        console.error('ffprobe error:', ffprobeResult.error);
+      } else {
+        const durationStr = ffprobeResult.stdout.toString().trim();
+        duration = parseInt(parseFloat(durationStr));
+        if (isNaN(duration)) duration = null;
+      }
+    } catch (e) {
+      console.error('提取视频时长失败:', e);
+    }
+
     const fileUrl = `/uploads/learning/${finalFilename}`;
     const fileStats = fs.statSync(finalFilePath);
 
     // 生成安全的显示文件名（只保留英文、数字、下划线）
     const safeOriginalName = req.file.originalname.replace(/[^\w\s.-]/g, '_');
-    
+
     res.json({
       code: 0,
       msg: '文件上传成功',
@@ -177,7 +231,8 @@ router.post('/learning/upload', authMiddleware, adminMiddleware, learningUpload.
         original_name: safeOriginalName,  // 原始文件名的安全版本
         size: fileStats.size,
         file_type: finalFileType,
-        converted: false  // 不再转换
+        converted: false,  // 不再转换
+        duration: duration  // 视频时长（秒）
       }
     });
   } catch (err) {

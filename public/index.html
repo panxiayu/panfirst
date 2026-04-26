@@ -9,6 +9,18 @@
     <title>员工登录 - 兴利汽车模具</title>
     <link rel="stylesheet" href="css/theme.css">
     <style>
+        :root {
+            --bg: #F0F7FF;
+            --card: #ffffff;
+            --border: #D6E9FF;
+            --primary: #4A90E2;
+            --secondary: #65B3FF;
+            --accent: #22C58D;
+            --text: #1D2B5A;
+            --text-soft: #5B72A9;
+            --radius: 22px;
+            --transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
         * {
             margin: 0;
             padding: 0;
@@ -18,7 +30,7 @@
         html, body {
             height: 100%;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            background: linear-gradient(180deg, #f0f4ff 0%, #e8eeff 100%);
+            background: var(--bg);
             min-height: 100vh;
             min-height: 100dvh;
             overflow-x: hidden;
@@ -35,78 +47,100 @@
             min-height: 100dvh;
             padding: 20px 16px;
         }
+
+        /* 序列入场动画 */
+        .fade-item {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: var(--transition);
+        }
+        .fade-in {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+
         .login-box {
-            background: white;
-            border-radius: 20px;
-            padding: 32px 24px;
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 40px 32px;
             width: 100%;
-            max-width: 340px;
-            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.12);
+            max-width: 380px;
+            border: 1px solid var(--border);
+            box-shadow: 0 18px 36px rgba(74, 144, 226, 0.12);
+            transition: var(--transition);
+        }
+        .login-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 24px 48px rgba(74, 144, 226, 0.15);
         }
         .logo {
-            font-size: 48px;
+            font-size: 56px;
             text-align: center;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }
         .title {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 700;
             text-align: center;
-            color: #1a1a1a;
-            margin-bottom: 4px;
+            color: var(--text);
+            margin-bottom: 6px;
         }
         .subtitle {
-            font-size: 13px;
-            color: #6b7280;
+            font-size: 14px;
+            color: var(--text-soft);
             text-align: center;
-            margin-bottom: 28px;
+            margin-bottom: 32px;
         }
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
         .form-label {
             display: block;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
-            color: #374151;
-            margin-bottom: 6px;
+            color: var(--text);
+            margin-bottom: 8px;
         }
         .form-control {
             width: 100%;
-            padding: 14px 14px;
-            background: #f9fafb;
-            border: 1.5px solid #e5e7eb;
-            border-radius: 12px;
+            padding: 16px 16px;
+            background: var(--bg);
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
             font-size: 16px;
-            color: #1a1a1a;
-            transition: all 0.2s;
+            color: var(--text);
+            transition: var(--transition);
             outline: none;
         }
         .form-control:focus {
-            border-color: #3b82f6;
-            background: white;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            border-color: var(--primary);
+            background: var(--card);
+            box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.1);
         }
         .form-control::placeholder {
-            color: #9ca3af;
+            color: var(--text-soft);
         }
         .form-control.name-input {
-            background: #f3f4f6;
+            background: var(--bg);
             cursor: not-allowed;
         }
         .login-btn {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            padding: 16px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
             color: white;
             border: none;
-            border-radius: 12px;
+            border-radius: var(--radius);
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: var(--transition);
             margin-top: 8px;
-            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+            box-shadow: 0 8px 20px rgba(74, 144, 226, 0.25);
+        }
+        .login-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 12px 28px rgba(74, 144, 226, 0.3);
         }
         .login-btn:active {
             transform: scale(0.98);
@@ -117,11 +151,16 @@
             transform: none;
         }
         .msg {
-            padding: 12px 14px;
-            border-radius: 10px;
-            font-size: 13px;
-            margin-top: 12px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            font-size: 14px;
+            margin-top: 16px;
             display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .msg-error {
             background: #fef2f2;
@@ -135,28 +174,31 @@
         }
         .admin-link {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 28px;
         }
         .admin-link a {
-            font-size: 13px;
-            color: #6b7280;
+            font-size: 14px;
+            color: var(--text-soft);
             text-decoration: none;
-            padding: 8px 16px;
+            padding: 8px 20px;
             display: inline-block;
+            border-radius: 20px;
+            transition: var(--transition);
         }
-        .admin-link a:active {
-            color: #3b82f6;
+        .admin-link a:hover {
+            color: var(--primary);
+            background: var(--bg);
         }
         .hint {
-            font-size: 11px;
-            color: #9ca3af;
+            font-size: 12px;
+            color: var(--text-soft);
             text-align: center;
-            margin-top: 16px;
+            margin-top: 20px;
         }
         .name-hint {
-            font-size: 11px;
-            color: #ef4444;
-            margin-top: 4px;
+            font-size: 12px;
+            color: #dc2626;
+            margin-top: 6px;
             display: none;
         }
         .name-hint.show {
@@ -166,7 +208,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="login-box">
+        <div class="login-box fade-item">
             <div class="logo">🏭</div>
             <div class="title">兴利汽车模具</div>
             <div class="subtitle">企业管理系统</div>
@@ -181,7 +223,7 @@
                     <input type="text" id="name" class="form-control name-input" placeholder="输入工号后自动填充" readonly>
                     <div id="nameHint" class="name-hint">系统中未找到该工号</div>
                 </div>
-                <button type="submit" class="login-btn" id="loginBtn">登录</button>
+                <button type="submit" class="login-btn" id="loginBtn">登 录</button>
                 <div id="msgError" class="msg msg-error"></div>
                 <div id="msgSuccess" class="msg msg-success"></div>
             </form>
@@ -196,6 +238,12 @@
 
     <script>
         const API = window.location.origin + '/api';
+
+        // 序列入场动画
+        const items = document.querySelectorAll('.fade-item');
+        items.forEach((el, i) => {
+            setTimeout(() => el.classList.add('fade-in'), 150 * i);
+        });
 
         let lookupTimer = null;
 
@@ -282,13 +330,13 @@
                     msgError.textContent = data.msg || '工号或姓名不匹配，无登录权限';
                     msgError.style.display = 'block';
                     btn.disabled = false;
-                    btn.textContent = '登录';
+                    btn.textContent = '登 录';
                 }
             } catch (err) {
                 msgError.textContent = '网络错误，请检查网络';
                 msgError.style.display = 'block';
                 btn.disabled = false;
-                btn.textContent = '登录';
+                btn.textContent = '登 录';
             }
         }
 

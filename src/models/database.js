@@ -44,6 +44,9 @@ function initDatabase() {
       initUsersColumns();
       initMealActivitiesColumns();
       initVotingTables();
+      initPermissionLogsTable();
+      // 迁移时间戳为本地时区（只在首次执行，迁移完成后删除迁移表标记）
+      migrateTimestampsToLocaltime();
       return;
     }
 
@@ -58,6 +61,7 @@ function initDatabase() {
       initUsersColumns();
       initMealActivitiesColumns();
       initVotingTables();
+      initPermissionLogsTable();
     } else {
       console.error('❌ 未找到 init.sql');
       throw new Error('初始化脚本不存在');
@@ -81,6 +85,18 @@ function initUsersColumns() {
     if (!columnNames.includes('can_manage_file')) {
       db.exec("ALTER TABLE users ADD COLUMN can_manage_file INTEGER DEFAULT 0");
       console.log('✅ users 表新增 can_manage_file 字段');
+    }
+    if (!columnNames.includes('can_manage_training')) {
+      db.exec("ALTER TABLE users ADD COLUMN can_manage_training INTEGER DEFAULT 0");
+      console.log('✅ users 表新增 can_manage_training 字段');
+    }
+    if (!columnNames.includes('can_manage_6s')) {
+      db.exec("ALTER TABLE users ADD COLUMN can_manage_6s INTEGER DEFAULT 0");
+      console.log('✅ users 表新增 can_manage_6s 字段');
+    }
+    if (!columnNames.includes('can_manage_permission')) {
+      db.exec("ALTER TABLE users ADD COLUMN can_manage_permission INTEGER DEFAULT 0");
+      console.log('✅ users 表新增 can_manage_permission 字段');
     }
   } catch (err) {
     console.error('❌ initUsersColumns 失败:', err.message);
@@ -189,6 +205,91 @@ function initVotingTables() {
   } catch (err) {
     console.error('❌ 初始化投票表失败:', err.message);
   }
+}
+
+// 初始化权限操作日志表
+function initPermissionLogsTable() {
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS permission_action_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        username TEXT,
+        tab TEXT,
+        action TEXT,
+        status TEXT DEFAULT 'success',
+        created_at DATETIME DEFAULT (datetime('now', 'localtime'))
+      )
+    `);
+    // 检查是否需要添加 status 列
+    const columns = db.prepare("PRAGMA table_info(permission_action_logs)").all();
+    const columnNames = columns.map(c => c.name);
+    if (!columnNames.includes('status')) {
+      db.exec("ALTER TABLE permission_action_logs ADD COLUMN status TEXT DEFAULT 'success'");
+      console.log('✅ permission_action_logs 表新增 status 字段');
+    }
+    console.log('✅ permission_action_logs 表已创建/存在');
+  } catch (err) {
+    console.error('❌ 初始化权限日志表失败:', err.message);
+  }
+}
+
+// 迁移：修改所有表的 created_at/updated_at 使用本地时间
+function migrateTimestampsToLocaltime() {
+  // 禁用外键约束以进行表重建
+  db.pragma('foreign_keys = OFF');
+
+  const tables = [
+    'users', 'staff', 'exams', 'questions', 'exam_records',
+    'votings', 'voting_options', 'meal_activities_v4', 'six_s_records',
+    'learning_tasks', 'voting_records', 'meal_signups_v4',
+    'learning_progress', 'homework_timer_records'
+  ];
+
+  tables.forEach(table => {
+    try {
+      // 检查表是否有 created_at 或 updated_at 列
+      const info = db.prepare(`PRAGMA table_info(${table})`).all();
+      const timeCols = info.filter(c => c.dflt_value && c.dflt_value.includes('CURRENT_TIMESTAMP'));
+
+      if (timeCols.length > 0) {
+        // 备份数据
+        db.exec(`CREATE TABLE ${table}_backup AS SELECT * FROM ${table}`);
+
+        // 删除旧表
+        db.exec(`DROP TABLE ${table}`);
+
+        // 创建新表（使用正确的默认值）
+        const createSQL = `CREATE TABLE ${table} (
+          ${info.map(c => {
+            let def = `${c.name} ${c.type || 'TEXT'}`;
+            if (c.pk) def += ' PRIMARY KEY';
+            if (c.notnull) def += ' NOT NULL';
+            if (c.dflt_value) {
+              if (c.dflt_value.includes('CURRENT_TIMESTAMP')) {
+                def += ` DEFAULT (datetime('now', 'localtime'))`;
+              } else {
+                def += ` DEFAULT ${c.dflt_value}`;
+              }
+            }
+            return def;
+          }).join(', ')}
+        )`;
+        db.exec(createSQL);
+
+        // 恢复数据
+        db.exec(`INSERT INTO ${table} SELECT * FROM ${table}_backup`);
+        db.exec(`DROP TABLE ${table}_backup`);
+
+        console.log(`✅ ${table} 表时间字段已迁移为本地时区`);
+      }
+    } catch (err) {
+      console.error(`❌ 迁移 ${table} 失败:`, err.message);
+    }
+  });
+
+  // 重新启用外键约束
+  db.pragma('foreign_keys = ON');
 }
 
 // 执行初始化

@@ -25,23 +25,6 @@ function switchTab(tab) {
     });
 }
 
-function loadData() {
-    document.getElementById('examList').innerHTML = '<div class="loading">加载中...</div>';
-
-    Promise.all([
-        fetch(`${API_URL}/exam/list`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).catch(() => ({ data: [] })),
-        fetch(`${API_URL}/exam/stats/user`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).catch(() => ({ data: {} })),
-        fetch(`${API_URL}/exam-admin/papers`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).catch(() => ({ data: [] }))
-    ]).then(([examData, statsData, papersData]) => {
-        exams = examData.data || [];
-        papers = papersData.data || [];
-        const stats = statsData.data || {};
-        renderExamList(stats);
-    }).catch(err => {
-        document.getElementById('examList').innerHTML = '<div class="empty-state">加载失败</div>';
-    });
-}
-
 function renderExamList(stats) {
     const totalExams = stats.total_exams || 0;
     const passedExams = stats.passed_exams || 0;

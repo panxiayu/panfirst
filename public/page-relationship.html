@@ -4,19 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>页面逻辑关系图 - 兴利汽车模具</title>
-    <link rel="stylesheet" href="css/linear.css">
     <link rel="stylesheet" href="css/theme.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: linear-gradient(135deg, var(--bg-page) 0%, var(--bg-surface) 50%, var(--bg-page) 100%); color: var(--text-primary); padding: 30px 20px; min-height: 100vh; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: linear-gradient(135deg, var(--bg) 0%, var(--bg) 50%, var(--bg) 100%); color: var(--text); padding: 30px 20px; min-height: 100vh; }
         h1 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
         .subtitle { font-size: 12px; color: var(--text-secondary); margin-bottom: 30px; }
-        .module-block { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; }
+        .module-block { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; }
         .module-title { font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 16px; }
         .page-item { background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 10px; transition: all 0.15s; }
         .page-item:hover { border-color: var(--border-strong); }
         .page-name-wrap { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-        .page-name { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+        .page-name { font-weight: 600; font-size: 14px; color: var(--text); }
         .page-link { font-size: 11px; color: var(--accent); font-family: monospace; padding: 2px 6px; background: rgba(94,106,210,0.1); border-radius: 4px; text-decoration: none; }
         .page-link:hover { text-decoration: underline; }
         .page-path { font-size: 11px; color: var(--text-tertiary); font-family: monospace; margin-bottom: 6px; }
@@ -28,7 +27,7 @@
         .tag-login { background: rgba(38,166,65,0.15); color: var(--success); }
         .tag-main { background: rgba(94,106,210,0.15); color: var(--accent); }
         .tag-module { background: rgba(255,255,255,0.07); color: var(--text-secondary); }
-        .summary { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+        .summary { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
         .summary-item { text-align: center; }
         .summary-num { font-size: 28px; font-weight: 700; color: var(--accent); }
         .summary-label { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }

@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'admin/login.html';
         return;
     }
+    // 权限检查
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    if (!currentUser.can_manage_voting) { alert('无权限访问投票系统'); window.location.href = 'dashboard.html'; return; }
     loadVotings();
 });
 

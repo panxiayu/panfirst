@@ -647,6 +647,7 @@
                 videoOverlay.classList.add('hidden');
                 videoControls.style.display = '';
                 isPlaying = true;
+                saveProgress();
             });
 
             video.addEventListener('pause', () => {
@@ -654,6 +655,12 @@
                 playBtn.classList.remove('hidden');
                 videoOverlay.classList.remove('hidden');
                 isPlaying = false;
+                saveProgress();
+            });
+
+            // Save progress on page unload
+            window.addEventListener('beforeunload', () => {
+                saveProgress();
             });
 
             video.addEventListener('timeupdate', onTimeUpdate);
@@ -742,6 +749,7 @@
                 const duration = video.duration || 1;
                 const progressPercent = Math.min(Math.floor((maxWatched / duration) * 100), 100);
                 const status = (completed || progressPercent >= 100) ? 'completed' : 'in_progress';
+                const showExamPrompt = progressPercent >= 99 && linkedExam && linkedExam.is_active;
 
                 const res = await fetch(API + '/learning-materials/' + materialId + '/progress', {
                     method: 'POST',
@@ -752,7 +760,7 @@
                     body: JSON.stringify({
                         status: status,
                         progress_percent: progressPercent,
-                        last_position: video.currentTime
+                        last_position: maxWatched
                     })
                 });
 
@@ -767,6 +775,9 @@
                         statusBadge.className = 'status-badge status-completed';
                         statusBadge.textContent = '已完成';
                         showCompleteToast();
+                    } else if (showExamPrompt && !localStorage.getItem('examModalShown_' + materialId)) {
+                        localStorage.setItem('examModalShown_' + materialId, 'true');
+                        document.getElementById('examAskModal').classList.add('show');
                     }
                 }
             } catch (err) {

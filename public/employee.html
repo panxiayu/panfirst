@@ -8,6 +8,20 @@
     <title>员工工作台 - 兴利汽车模具</title>
     <link rel="stylesheet" href="css/mobile-theme.css">
     <style>
+        :root {
+            --bg: #F0F7FF;
+            --card: #ffffff;
+            --border: #D6E9FF;
+            --primary: #4A90E2;
+            --secondary: #65B3FF;
+            --accent: #22C58D;
+            --text: #1D2B5A;
+            --text-soft: #5B72A9;
+            --radius: 22px;
+            --transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+            --shadow: 0 8px 24px rgba(74, 144, 226, 0.12);
+            --shadow-hover: 0 16px 40px rgba(74, 144, 226, 0.18);
+        }
         * {
             margin: 0;
             padding: 0;
@@ -17,19 +31,37 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
-            background: var(--mobile-bg-page);
-            color: var(--mobile-text-primary);
+            background: var(--bg);
+            color: var(--text);
             padding-bottom: 80px;
             padding-top: 20px;
         }
 
+        /* 序列入场动画 */
+        .fade-item {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: var(--transition);
+        }
+        .fade-in {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+
         .logout-btn {
-            font-size: 17px;
-            color: var(--mobile-text-primary);
-            background: none;
-            border: none;
+            font-size: 15px;
+            color: var(--text-soft);
+            background: var(--bg);
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
             cursor: pointer;
-            padding: 8px;
+            padding: 8px 16px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        .logout-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
         .container {
@@ -39,49 +71,63 @@
         }
 
         .welcome-card {
-            background: var(--mobile-bg-card);
-            border-radius: var(--mobile-radius-xl);
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: var(--mobile-shadow-md);
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: var(--transition);
+        }
+        .welcome-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
         }
 
         .welcome-left { flex: 1; }
 
         .welcome-title {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 700;
             margin-bottom: 4px;
+            color: var(--text);
         }
 
         .welcome-sub {
             font-size: 14px;
-            color: var(--mobile-text-secondary);
+            color: var(--text-soft);
         }
 
         .module-card {
-            background: var(--mobile-bg-card);
-            border-radius: var(--mobile-radius-xl);
+            background: var(--card);
+            border-radius: var(--radius);
             padding: 20px;
             margin-bottom: 16px;
-            box-shadow: var(--mobile-shadow-md);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
             cursor: pointer;
-            transition: all var(--mobile-transition-fast);
+            transition: var(--transition);
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
             text-decoration: none;
-            color: var(--mobile-text-primary);
+            color: var(--text);
+        }
+        .module-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--primary);
+        }
+        .module-card:active {
+            transform: scale(0.98);
         }
 
         .module-card:last-child {
             margin-bottom: 0;
         }
-
-        .module-card:active { transform: scale(0.98); opacity: 0.9; }
 
         .module-icon {
             width: 64px;
@@ -113,40 +159,46 @@
 
         .module-name {
             font-size: 17px;
-            font-weight: 600;
-            margin-bottom: 2px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: var(--text);
         }
 
         .module-desc {
             font-size: 13px;
-            color: var(--mobile-text-secondary);
+            color: var(--text-soft);
         }
 
         .module-arrow {
-            font-size: 20px;
-            color: var(--mobile-text-secondary);
+            font-size: 24px;
+            color: var(--text-soft);
             flex-shrink: 0;
+            transition: var(--transition);
+        }
+        .module-card:hover .module-arrow {
+            color: var(--primary);
+            transform: translateX(4px);
         }
 
         .no-permission {
             text-align: center;
             padding: 60px 20px;
-            color: var(--mobile-text-tertiary);
+            color: var(--text-soft);
         }
 
-        .no-permission-icon { font-size: 48px; margin-bottom: 16px; }
+        .no-permission-icon { font-size: 56px; margin-bottom: 16px; }
 
         .loading {
             text-align: center;
             padding: 60px 20px;
-            color: var(--mobile-text-tertiary);
+            color: var(--text-soft);
         }
         .loading::after {
             content: '';
             display: inline-block;
             width: 18px;
             height: 18px;
-            border: 2px solid var(--mobile-secondary);
+            border: 2px solid var(--secondary);
             border-top-color: transparent;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
@@ -160,36 +212,36 @@
             bottom: 0;
             width: 100%;
             height: 76px;
-            background: rgba(255,255,255,0.75);
+            background: rgba(255,255,255,0.85);
             backdrop-filter: blur(40px);
             -webkit-backdrop-filter: blur(40px);
             display: flex;
             justify-content: space-around;
             align-items: center;
             padding-bottom: 20px;
-            border-top: 1px solid rgba(0,0,0,0.06);
+            border-top: 1px solid var(--border);
             z-index: 999;
         }
 
         .tab-item {
             font-size: 12px;
-            color: var(--mobile-text-tertiary);
+            color: var(--text-soft);
             text-align: center;
             transition: var(--transition);
         }
-        .tab-item.active { color: var(--mobile-secondary); }
+        .tab-item.active { color: var(--primary); }
     </style>
 </head>
 <body>
     <div class="container">
-        <div id="loading" class="loading" style="display: none;">加载中...</div>
-        <div id="noPermission" class="no-permission" style="display:none">
+        <div id="loading" class="loading fade-item" style="display: none;">加载中...</div>
+        <div id="noPermission" class="no-permission fade-item" style="display:none">
             <div class="no-permission-icon">🔒</div>
             <div>您当前没有任何可用模块权限</div>
             <div style="font-size:12px;margin-top:8px;">请联系管理员开通权限</div>
         </div>
 
-        <div class="welcome-card">
+        <div class="welcome-card fade-item">
             <div class="welcome-left">
                 <div class="welcome-title" id="welcomeName">你好，员工</div>
                 <div class="welcome-sub">欢迎使用兴利汽车模具工作台</div>
@@ -198,7 +250,7 @@
         </div>
 
         <div id="moduleGrid" style="display:none">
-            <a class="module-card card-learning" id="cardLearning" href="mobile-learning-materials-list.html" style="display:none">
+            <a class="module-card card-learning fade-item" id="cardLearning" href="mobile-learning-materials-list.html" style="display:none">
                 <div class="module-icon">📚</div>
                 <div class="module-info">
                     <div class="module-name">学习资料</div>
@@ -206,7 +258,7 @@
                 </div>
                 <div class="module-arrow">›</div>
             </a>
-            <a class="module-card card-exam" id="cardExam" href="mobile-exam-list.html" style="display:none">
+            <a class="module-card card-exam fade-item" id="cardExam" href="mobile-exam-list.html" style="display:none">
                 <div class="module-icon"><img src="icons/icon-exam.svg" alt="培训"></div>
                 <div class="module-info">
                     <div class="module-name">在线考试</div>
@@ -214,7 +266,7 @@
                 </div>
                 <div class="module-arrow">›</div>
             </a>
-            <a class="module-card card-meal" id="cardMeal" href="mobile-meal-list.html" style="display:none">
+            <a class="module-card card-meal fade-item" id="cardMeal" href="mobile-meal-list.html" style="display:none">
                 <div class="module-icon"><img src="icons/icon-meal.svg" alt="报餐"></div>
                 <div class="module-info">
                     <div class="module-name">报餐系统</div>
@@ -222,7 +274,7 @@
                 </div>
                 <div class="module-arrow">›</div>
             </a>
-            <a class="module-card card-6s" id="card6S" href="mobile-6s-list.html" style="display:none">
+            <a class="module-card card-6s fade-item" id="card6S" href="mobile-6s-list.html" style="display:none">
                 <div class="module-icon"><img src="icons/icon-6s.svg" alt="6S"></div>
                 <div class="module-info">
                     <div class="module-name">6S管理</div>
@@ -230,7 +282,7 @@
                 </div>
                 <div class="module-arrow">›</div>
             </a>
-            <a class="module-card card-voting" id="cardVoting" href="mobile-voting-list.html">
+            <a class="module-card card-voting fade-item" id="cardVoting" href="mobile-voting-list.html">
                 <div class="module-icon"><img src="icons/icon-voting.svg" alt="投票"></div>
                 <div class="module-info">
                     <div class="module-name">投票系统</div>
@@ -294,6 +346,12 @@
                 document.getElementById('noPermission').style.display = '';
             }
             document.getElementById('moduleGrid').style.display = '';
+
+            // 序列入场动画
+            const items = document.querySelectorAll('.fade-item');
+            items.forEach((el, i) => {
+                setTimeout(() => el.classList.add('fade-in'), 150 * i);
+            });
         }
 
         async function checkGranularPermissions(token, staffId) {

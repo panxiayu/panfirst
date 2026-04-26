@@ -114,12 +114,6 @@ const api = {
     data: { answerId, responses }
   }),
 
-  // 获取所有考试记录（管理员）
-  getAllExamRecords: () => request({
-    url: '/api/exam-admin/records',
-    method: 'GET'
-  }),
-
   // 导入题目（管理员）
   importQuestions: (text, paperTitle) => request({
     url: '/api/import/upload',
@@ -184,16 +178,45 @@ const api = {
     });
   },
 
-  // 获取试卷列表（管理员）
-  getPaperList: () => request({
-    url: '/api/exam-admin/papers',
+  // ============ 题库管理 API ============
+
+  // 获取题库列表
+  getQuestionBanks: () => request({
+    url: '/api/question-banks',
     method: 'GET'
   }),
 
-  // 获取试卷详细答题记录（管理员）
-  getPaperDetail: (paperId) => request({
-    url: `/api/exam-admin/paper/${paperId}`,
+  // 创建题库
+  createQuestionBank: (data) => request({
+    url: '/api/question-banks',
+    method: 'POST',
+    data
+  }),
+
+  // 获取题库详情
+  getQuestionBank: (id) => request({
+    url: `/api/question-banks/${id}`,
     method: 'GET'
+  }),
+
+  // 更新题库
+  updateQuestionBank: (id, data) => request({
+    url: `/api/question-banks/${id}`,
+    method: 'PUT',
+    data
+  }),
+
+  // 删除题库
+  deleteQuestionBank: (id) => request({
+    url: `/api/question-banks/${id}`,
+    method: 'DELETE'
+  }),
+
+  // 导入题目到题库
+  importQuestionsToBank: (bankId, questions) => request({
+    url: `/api/question-banks/${bankId}/import`,
+    method: 'POST',
+    data: { questions }
   }),
 };
 

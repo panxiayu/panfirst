@@ -91,18 +91,26 @@ router.post('/login', (req, res) => {
         can_manage_exam: user.can_manage_exam || 0,
         can_manage_meal: user.can_manage_meal || 0,
         can_manage_staff: user.can_manage_staff || 0,
-        can_manage_task: user.can_manage_task || 0
+        can_manage_task: user.can_manage_task || 0,
+        can_manage_training: user.can_manage_training || 0,
+        can_manage_6s: user.can_manage_6s || 0,
+        can_manage_permission: user.can_manage_permission || 0,
+        can_manage_file: user.can_manage_file || 0
       });
 
       // 返回用户信息（不包含密码）
       const { password: _, ...safeUser } = user;
-      
+
       // 确保权限字段存在
       safeUser.can_manage_voting = user.can_manage_voting || 0;
       safeUser.can_manage_exam = user.can_manage_exam || 0;
       safeUser.can_manage_meal = user.can_manage_meal || 0;
       safeUser.can_manage_staff = user.can_manage_staff || 0;
       safeUser.can_manage_task = user.can_manage_task || 0;
+      safeUser.can_manage_training = user.can_manage_training || 0;
+      safeUser.can_manage_6s = user.can_manage_6s || 0;
+      safeUser.can_manage_permission = user.can_manage_permission || 0;
+      safeUser.can_manage_file = user.can_manage_file || 0;
 
       return res.json({
         code: 0,
