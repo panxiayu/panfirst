@@ -245,7 +245,7 @@ router.get('/my-records', authMiddleware, (req, res) => {
 router.get('/guest-permissions', authMiddleware, adminMiddleware, (req, res) => {
   try {
     const staff = db.prepare(`
-      SELECT id, employee_id, name, department, team, position, guest_meal_permission
+      SELECT id, employee_id, name, name_pinyin, department, team, position, guest_meal_permission
       FROM staff
       WHERE status = 'active'
       ORDER BY employee_id
@@ -256,7 +256,7 @@ router.get('/guest-permissions', authMiddleware, adminMiddleware, (req, res) => 
 
     res.json({ code: 0, msg: 'success', data: { staff, total, withPermission } });
   } catch (err) {
-    console.error('获取客餐权限失败:', err);
+    console.error('获取报餐权限失败:', err);
     res.status(500).json({ code: -1, msg: '服务器错误', data: null });
   }
 });

@@ -216,8 +216,17 @@ router.post('/learning/upload', authMiddleware, adminMiddleware, learningUpload.
       console.error('提取视频时长失败:', e);
     }
 
-    const fileUrl = `/uploads/learning/${finalFilename}`;
-    const fileStats = fs.statSync(finalFilePath);
+    // 上传到移动云对象存储
+    let fileUrl;
+    try {
+      const { uploadToCloud } = require('../utils/cloud-storage');
+      fileUrl = await uploadToCloud(finalFilePath, req.file.originalname, 'learning/');
+      console.log('文件已上传到移动云:', fileUrl);
+    } catch (cloudErr) {
+      console.error('上传到云存储失败，保留本地文件:', cloudErr.message);
+      // 失败时使用本地路径
+      fileUrl = `/uploads/learning/${finalFilename}`;
+    }
 
     // 生成安全的显示文件名（只保留英文、数字、下划线）
     const safeOriginalName = req.file.originalname.replace(/[^\w\s.-]/g, '_');
@@ -229,10 +238,11 @@ router.post('/learning/upload', authMiddleware, adminMiddleware, learningUpload.
         file_url: fileUrl,
         filename: finalFilename,  // 服务器存储的文件名（UUID）
         original_name: safeOriginalName,  // 原始文件名的安全版本
-        size: fileStats.size,
+        size: req.file.size,
         file_type: finalFileType,
         converted: false,  // 不再转换
-        duration: duration  // 视频时长（秒）
+        duration: duration,  // 视频时长（秒）
+        storage: fileUrl.startsWith('http') ? 'cloud' : 'local'
       }
     });
   } catch (err) {

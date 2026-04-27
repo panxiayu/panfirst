@@ -631,6 +631,8 @@ select.form-control {
     display: flex;
     gap: 4px;
     padding: 6px;
+    position: relative;
+    overflow: hidden;
 }
 .tab-btn {
     flex: 1;
@@ -643,15 +645,32 @@ select.form-control {
     background: transparent;
     color: var(--text-soft);
     transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    z-index: 1;
 }
 .tab-btn:hover {
     color: var(--text);
 }
 .tab-btn.active {
-    background: var(--white);
     color: var(--primary);
-    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.15);
 }
+.tab-bar::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: calc(25% - 7px);
+    height: calc(100% - 12px);
+    background: var(--white);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.15);
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 0;
+}
+.tab-bar[data-active="papers"]::before { transform: translateX(calc(100% + 4px)); }
+.tab-bar[data-active="training"]::before { transform: translateX(calc(200% + 8px)); }
+.tab-bar[data-active="questions"]::before { transform: translateX(calc(300% + 12px)); }
+
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 

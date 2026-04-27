@@ -1,0 +1,9 @@
+{
+  "sessionId": "1777257560961_1bs0b5",
+  "startTime": "2026-04-27T02:39:20.961Z",
+  "workingDirectory": "/home/openclaw/apps/server",
+  "agentVersion": "1.0.0",
+  "modelUsed": "minimax-pro-128k",
+  "totalCommands": 0,
+  "totalTokens": 789
+}

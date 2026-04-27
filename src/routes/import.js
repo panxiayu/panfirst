@@ -139,10 +139,10 @@ router.post('/parse-file', authMiddleware, adminMiddleware, upload.single('file'
     const ext = path.extname(req.file.originalname).toLowerCase();
 
     if (ext === '.docx') {
-      // 使用 HTML 提取再转文本，更好地处理中文编码
-      const result = await mammoth.convertToHtml({ path: req.file.path });
-      // 简单 HTML 标签去除，保留纯文本
-      text = result.value.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
+      // 直接提取纯文本，更好地处理中文编码
+      const result = await mammoth.extractRawText({ path: req.file.path });
+      // mammoth用空格连接段落，改为换行符以便解析
+      text = result.value.replace(/ /g, '\n').trim();
     } else if (ext === '.doc') {
       // 使用 antiword 解析 .doc 文件
       try {

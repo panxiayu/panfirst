@@ -11,6 +11,38 @@
 | **当前任务** | 暂无紧急任务 |
 | **待办** | 食堂统计页面（总份数统计）、打卡对账功能（打卡数据导入/自动比对） |
 
+## 培训系统架构（重要）
+
+```
+exam.html（PC培训管理）
+├── 培训记录 Tab → GET /api/exam-trainings/records-summary
+│   └── 显示：授权人数、已完成学习、参加考试、通过考试、参与率、通过率
+├── 培训任务 Tab → GET /api/exam-trainings
+│   └── 新建/编辑/启用/停用培训
+├── 学习资料 Tab → GET /api/learning-materials
+│   └── 上传视频到移动云
+└── 题库管理 Tab → GET /api/question-banks
+    └── 导入题目
+
+mobile-training-list.html（员工培训列表）
+└── GET /api/exam/list → 跳转 mobile-learning-materials-detail.html
+
+mobile-learning-materials-detail.html（员工视频学习）
+├── 4事件触发进度保存：play, pause, ended, beforeunload
+├── sendBeacon 确保页面关闭时可靠保存
+├── maxWatched 防止跳过观看
+└── 进度>=99% 弹出参加考试提示
+
+exam_permissions 表（培训授权）
+├── exam_id → exam_trainings.id
+└── staff_id → staff.id
+
+learning_progress 表（学习进度）
+├── task_id → learning_tasks.id
+├── staff_id → staff.id
+└── status: not_started, in_progress, completed
+```
+
 ---
 
 ## 项目概述
@@ -169,6 +201,28 @@ CREATE TABLE IF NOT EXISTS six_s_records (
 ---
 
 ## 开发进度
+
+### 2026-04-27 完成
+
+**培训记录标签页重构**
+- 新增 `GET /api/exam-trainings/records-summary` 接口，只返回已启用的培训任务
+- 添加 `is_archived` 字段，启用培训时自动设置
+- 培训任务停用后记录永久保留（基于 `is_archived` 标记）
+- 优化培训记录卡片样式：圆角、渐变、进度条、数据网格
+
+**文件**：
+- `src/routes/exam-trainings.js` - records-summary 接口、is_archived 逻辑
+- `public/js/exam.js` - 培训记录卡片样式、showTrainingRecordDetail 函数
+
+**云存储配置**
+- 移动云 EOS（移动云）已配置
+- 学习资料视频上传到移动云，公开访问URL
+- 配置：`src/config/cloud-storage.js`
+
+**MiniMax MCP 已集成**
+- MCP 服务器：`minimax-coding-plan-mcp`
+- 工具：`web_search`（网络搜索）、`understand_image`（图像理解）
+- 配置：~/.claude.json
 
 ### 2026-04-26 完成
 

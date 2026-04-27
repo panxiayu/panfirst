@@ -168,10 +168,15 @@ class WordParser {
         return true;
       }
     }
+    // 章节标题格式：一、判断题  二、单选题  三、多选题
+    // 匹配：以数字+顿号开头，后面是题型
+    if (line.match(/^[一二三四五六七八九十]+[、][判断单选多选填空简答论述名词计算]+题$/)) {
+      return true;
+    }
     return false;
   }
 
-  // 检测章节标题行（如：是 非题（每题3分，共30分）  单项选择题（每题4分，共40分））
+  // 检测章节标题行（如：是 非题（每题3分，共30分）  单项选择题（每题4分，共40分）  一、判断题  二、单选题）
   isSectionTitle(content) {
     // 标题行特征：
     // 1. 包含"题"字（题型描述）
@@ -179,6 +184,7 @@ class WordParser {
     // 3. 不包含选项标记（A、B、C、D）
     // 4. 不包含问号（题目才有问号）
     // 5. 不包含答案标记
+    // 6. 或者是 "一、判断题" 格式的章节标题
 
     // 如果包含问号，认为是题目
     if (content.match(/[?？]/)) {
@@ -200,6 +206,12 @@ class WordParser {
     const hasScoreInfo = content.includes('每题') || content.includes('共') || content.includes('分');
 
     if (hasQuestionType && hasScoreInfo) {
+      return true;
+    }
+
+    // 章节标题格式：一、二、判断题  或 二、单选题
+    // 特征：以数字+顿号开头，后面是题型名称
+    if (content.match(/^[一二三四五六七八九十]+[、]/)) {
       return true;
     }
 

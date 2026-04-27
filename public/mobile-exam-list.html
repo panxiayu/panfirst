@@ -209,6 +209,7 @@
             const html = exams.map(exam => {
                 let statusClass = 'status-info';
                 let statusText = '参加考试';
+                let isDisabled = false;
 
                 if (exam.completed) {
                     if (exam.is_passed) {
@@ -218,12 +219,17 @@
                         statusClass = 'status-danger';
                         statusText = '未通过';
                     }
+                } else if (!exam.is_available) {
+                    statusClass = 'status-danger';
+                    statusText = exam.unavailable_reason || '不可参加';
+                    isDisabled = true;
                 }
 
                 return `
-                    <div class="ios-card" onclick="goToExam(${exam.id}, ${exam.completed})">
+                    <div class="ios-card ${isDisabled ? 'disabled' : ''}" onclick="${isDisabled ? '' : 'goToExam(' + exam.id + ', ' + exam.completed + ')'}">
                         <h3>${exam.title}${exam.completed ? `<span class="score-badge ${exam.is_passed ? 'pass' : 'fail'}">${exam.last_score}分</span>` : ''}</h3>
                         <p>时长: ${exam.duration}分钟 | 及格分: ${exam.pass_score}分 | 总分: ${exam.total_score}分</p>
+                        ${!exam.is_available && !exam.completed ? `<p style="color: var(--ios-red); font-size: 12px; margin-top: 4px;">${exam.unavailable_reason || '不可参加'}</p>` : ''}
                         <span class="status-badge ${exam.completed ? (exam.is_passed ? 'status-success' : 'status-danger') : 'status-info'}">${statusText}</span>
                     </div>
                 `;

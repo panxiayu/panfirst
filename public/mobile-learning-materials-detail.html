@@ -449,12 +449,7 @@
             </div>
 
             <div id="examSection" class="exam-section" style="display: none;">
-                <div class="exam-info">
-                    <div class="exam-info-title">📝 关联考试</div>
-                    <div id="examTitle" class="exam-info-desc"></div>
-                    <div id="examStatus" class="exam-info-desc" style="margin-top: 4px;"></div>
-                </div>
-                <button id="examBtn" class="ios-btn" onclick="goToExam()">参加考试</button>
+                <!-- 考试入口已改为弹窗提示，此卡片暂时隐藏 -->
             </div>
         </div>
     </div>
@@ -482,9 +477,9 @@
             <span class="tab-icon">📝</span>
             考试
         </a>
-        <a class="tab-item active" href="mobile-learning-materials-list.html">
+        <a class="tab-item active" href="mobile-training-list.html">
             <span class="tab-icon">📚</span>
-            学习
+            培训
         </a>
     </nav>
 
@@ -493,14 +488,14 @@
         const FILE_SERVER = window.location.origin;
         let token = localStorage.getItem('employee_token');
         let materialId = null;
+        let trainingId = null;  // 培训ID，用于跳转考试
         let materialData = null;
         let video = null;
-        let isPlaying = false;
-        let saveTimer = null;
         let maxWatched = 0;
         let linkedExam = null;
-        let hasShownCompleteModal = false;
+        let hasShownExamModal = false;
         let isVideoCompleted = false;
+        let examModalKey = null;  // 考试弹窗的 localStorage key
 
         if (!token) {
             window.location.href = 'index.html';
@@ -510,13 +505,26 @@
             return new URLSearchParams(window.location.search).get('id');
         }
 
+        function getTrainingId() {
+            return new URLSearchParams(window.location.search).get('trainingId');
+        }
+
         function goBack() {
-            window.location.href = 'mobile-learning-materials-list.html';
+            window.location.href = 'mobile-training-list.html';
         }
 
         async function loadMaterial() {
             materialId = getMaterialId();
+            trainingId = getTrainingId();
+
             if (!materialId) { goBack(); return; }
+
+            // 保存 trainingId 到 localStorage，用于后续跳转
+            if (trainingId) {
+                localStorage.setItem('currentTrainingId', trainingId);
+            } else {
+                trainingId = localStorage.getItem('currentTrainingId');
+            }
 
             document.getElementById('loading').style.display = '';
 
@@ -551,7 +559,9 @@
                 document.getElementById('timeWarning').style.display = '';
             }
 
-            document.getElementById('materialTitle').textContent = material.title || '未命名资料';
+            // ★ 显示培训标题（exam.title），不是学习资料标题
+            const displayTitle = material.exam ? material.exam.title : material.title;
+            document.getElementById('materialTitle').textContent = displayTitle || '未命名培训';
 
             if (material.description) {
                 document.getElementById('materialDesc').textContent = material.description;
@@ -581,26 +591,11 @@
             document.getElementById('progressFill').style.width = progressPercent + '%';
             document.getElementById('progressText').textContent = '学习进度: ' + progressPercent + '%';
 
-            // Exam section
+            // Exam section - 用于显示关联考试信息，但不需要这个卡片了（弹窗替代）
             if (material.exam) {
                 linkedExam = material.exam;
-                const examSection = document.getElementById('examSection');
-                const examTitle = document.getElementById('examTitle');
-                const examStatus = document.getElementById('examStatus');
-                const examBtn = document.getElementById('examBtn');
-
-                examTitle.textContent = linkedExam.title || '未命名考试';
-                examStatus.textContent = '时长: ' + linkedExam.duration + '分钟 | 及格分数: ' + linkedExam.pass_score + '分';
-
-                if (linkedExam.is_active) {
-                    examStatus.innerHTML += ' | <span style="color:var(--ios-green);">考试已启用</span>';
-                } else {
-                    examStatus.innerHTML += ' | <span style="color:var(--ios-red);">考试已停用</span>';
-                    examBtn.classList.add('disabled');
-                    examBtn.onclick = function() { showToast('考试已停用，暂时无法参加', true); };
-                }
-
-                examSection.style.display = '';
+                // 如果没有 trainingId，用 exam.id
+                if (!trainingId) trainingId = linkedExam.id;
             }
 
             // Video section
@@ -627,10 +622,12 @@
             }
             video.src = src;
 
-            // Restore position
-            if (progress && progress.last_position && progress.status !== 'completed') {
-                video.currentTime = progress.last_position;
+            // Restore position from server (max of saved position)
+            if (progress && progress.last_position) {
                 maxWatched = progress.last_position;
+                if (progress.status !== 'completed') {
+                    video.currentTime = progress.last_position;
+                }
             }
 
             // Play button click
@@ -640,31 +637,39 @@
                 togglePlay();
             });
 
-            // Video events
+            // ★ 4个关键节点立即保存进度（不用 debounce）
+
+            // 1. play 事件 - 开始播放
             video.addEventListener('play', () => {
                 playBtn.textContent = '❚❚';
                 playBtn.classList.add('hidden');
                 videoOverlay.classList.add('hidden');
                 videoControls.style.display = '';
-                isPlaying = true;
+                // 立即保存
                 saveProgress();
             });
 
+            // 2. pause 事件 - 暂停（非结束）
             video.addEventListener('pause', () => {
                 playBtn.textContent = '▶';
                 playBtn.classList.remove('hidden');
                 videoOverlay.classList.remove('hidden');
-                isPlaying = false;
+                // 立即保存
                 saveProgress();
             });
 
-            // Save progress on page unload
+            // 3. ended 事件 - 播放完成
+            video.addEventListener('ended', onVideoEnded);
+
+            // 4. beforeunload 事件 - 页面关闭/跳转
             window.addEventListener('beforeunload', () => {
-                saveProgress();
+                if (maxWatched > 0) {
+                    // 使用 sendBeacon 确保可靠保存
+                    sendBeaconProgress();
+                }
             });
 
             video.addEventListener('timeupdate', onTimeUpdate);
-            video.addEventListener('ended', onVideoEnded);
             video.addEventListener('loadedmetadata', onVideoLoaded);
 
             // Prevent fast forward - block seeking forward beyond maxWatched
@@ -687,13 +692,15 @@
             const duration = video.duration;
             document.getElementById('durationTime').textContent = formatTime(duration);
 
-            // If already completed, seek to end
+            // If already completed, seek to end and show exam prompt
             if (materialData.progress && materialData.progress.status === 'completed') {
                 video.currentTime = video.duration;
                 maxWatched = video.duration;
                 isVideoCompleted = true;
                 document.getElementById('progressFill').style.width = '100%';
                 document.getElementById('progressText').textContent = '学习进度: 100%';
+                // 检查是否需要弹出考试提示
+                checkAndShowExamPrompt(100);
             }
         }
 
@@ -716,14 +723,6 @@
             if (currentTime > maxWatched) {
                 maxWatched = currentTime;
             }
-
-            // Debounced save
-            if (!saveTimer) {
-                saveTimer = setTimeout(() => {
-                    saveProgress();
-                    saveTimer = null;
-                }, 3000);
-            }
         }
 
         function onSeeking() {
@@ -739,7 +738,30 @@
         function onVideoEnded() {
             maxWatched = video.duration;
             isVideoCompleted = true;
+            // 立即保存并标记完成
             saveProgress(true);
+        }
+
+        // ★ 使用 sendBeacon 确保页面关闭时可靠保存
+        function sendBeaconProgress() {
+            if (!materialId || maxWatched <= 0) return;
+
+            const duration = video ? (video.duration || 1) : 1;
+            const progressPercent = Math.min(Math.floor((maxWatched / duration) * 100), 100);
+            const status = isVideoCompleted || progressPercent >= 100 ? 'completed' : 'in_progress';
+
+            const payload = JSON.stringify({
+                status: status,
+                progress_percent: progressPercent,
+                last_position: maxWatched
+            });
+
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(
+                    API + '/learning-materials/' + materialId + '/progress',
+                    new Blob([payload], { type: 'application/json' })
+                );
+            }
         }
 
         async function saveProgress(completed = false) {
@@ -749,7 +771,6 @@
                 const duration = video.duration || 1;
                 const progressPercent = Math.min(Math.floor((maxWatched / duration) * 100), 100);
                 const status = (completed || progressPercent >= 100) ? 'completed' : 'in_progress';
-                const showExamPrompt = progressPercent >= 99 && linkedExam && linkedExam.is_active;
 
                 const res = await fetch(API + '/learning-materials/' + materialId + '/progress', {
                     method: 'POST',
@@ -767,17 +788,23 @@
                 const data = await res.json();
 
                 if (data.code === 0) {
+                    // 更新本地显示
                     document.getElementById('progressFill').style.width = progressPercent + '%';
                     document.getElementById('progressText').textContent = '学习进度: ' + progressPercent + '%';
 
-                    if (status === 'completed') {
+                    // 如果服务器返回的进度更高，更新 maxWatched
+                    if (data.data && data.data.last_position > maxWatched) {
+                        maxWatched = data.data.last_position;
+                    }
+
+                    // 检查是否需要显示考试弹窗
+                    checkAndShowExamPrompt(progressPercent);
+
+                    // 如果状态是完成
+                    if (status === 'completed' || (data.data && data.data.status === 'completed')) {
                         const statusBadge = document.getElementById('statusBadge');
                         statusBadge.className = 'status-badge status-completed';
                         statusBadge.textContent = '已完成';
-                        showCompleteToast();
-                    } else if (showExamPrompt && !localStorage.getItem('examModalShown_' + materialId)) {
-                        localStorage.setItem('examModalShown_' + materialId, 'true');
-                        document.getElementById('examAskModal').classList.add('show');
                     }
                 }
             } catch (err) {
@@ -785,15 +812,22 @@
             }
         }
 
-        function showCompleteToast() {
-            if (hasShownCompleteModal) return;
-            hasShownCompleteModal = true;
+        function checkAndShowExamPrompt(progressPercent) {
+            // 只有进度 >= 99% 才弹出考试提示
+            if (progressPercent < 99) return;
+            if (!linkedExam || !linkedExam.is_active) return;
 
-            if (linkedExam && linkedExam.is_active) {
-                document.getElementById('examAskModal').classList.add('show');
-            } else {
-                showToast('🎉 学习资料已完成！');
+            // 生成唯一的 localStorage key（基于 materialId + trainingId）
+            examModalKey = 'examPromptShown_' + materialId + '_' + trainingId;
+
+            if (!localStorage.getItem(examModalKey)) {
+                localStorage.setItem(examModalKey, 'true');
+                showExamAskModal();
             }
+        }
+
+        function showExamAskModal() {
+            document.getElementById('examAskModal').classList.add('show');
         }
 
         function closeExamAskModal() {
@@ -802,8 +836,11 @@
 
         function goToExam() {
             closeExamAskModal();
-            if (linkedExam) {
-                window.location.href = 'mobile-exam-list.html?examId=' + linkedExam.id;
+            if (trainingId) {
+                // 跳转到答题页面
+                window.location.href = 'mobile-exam-doing.html?id=' + trainingId;
+            } else if (linkedExam) {
+                window.location.href = 'mobile-exam-doing.html?id=' + linkedExam.id;
             }
         }
 
@@ -830,12 +867,6 @@
             const minute = d.getMinutes().toString().padStart(2, '0');
             return `${month}月${day}日 ${hour}:${minute}`;
         }
-
-        window.addEventListener('beforeunload', () => {
-            if (video && maxWatched > 0 && !isVideoCompleted) {
-                saveProgress();
-            }
-        });
 
         loadMaterial();
     </script>

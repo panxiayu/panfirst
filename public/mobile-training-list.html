@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>在线培训 - 兴利汽车模具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --ios-bg: #f2f2f7;
+            --ios-card: rgba(255,255,255,0.9);
+            --ios-blue: #007aff;
+            --ios-gray: #8e8e93;
+            --ios-green: #34c759;
+            --ios-orange: #ff9500;
+            --ios-red: #ff3b30;
+            --ios-radius: 16px;
+            --ios-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+            --transition: 0.3s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+            background: var(--ios-bg);
+            color: #1c1c1e;
+            padding-bottom: 100px;
+            padding-top: 20px;
+        }
+
+        .header {
+            max-width: 480px;
+            margin: 0 auto 16px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--ios-card);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--ios-shadow);
+            font-size: 16px;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            flex: 1;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ios-gray);
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--ios-blue);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ios-gray);
+        }
+        .empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-text { font-size: 15px; }
+
+        .training-item {
+            background: var(--ios-card);
+            border-radius: var(--ios-radius);
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            box-shadow: var(--ios-shadow);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .training-item:active { transform: scale(0.98); }
+        .training-item.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .training-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+
+        .training-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, var(--ios-blue), #58c8ff);
+            color: white;
+        }
+
+        .training-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .training-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .training-desc {
+            font-size: 13px;
+            color: var(--ios-gray);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .training-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 12px;
+            border-top: 1px solid rgba(0,0,0,0.06);
+        }
+
+        .training-info-row {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--ios-gray);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-not-started { background: rgba(142,142,147,0.12); color: var(--ios-gray); }
+        .status-in-progress { background: rgba(255,149,0,0.12); color: var(--ios-orange); }
+        .status-completed { background: rgba(52,199,89,0.12); color: var(--ios-green); }
+        .status-passed { background: rgba(0,122,255,0.12); color: var(--ios-blue); }
+        .status-failed { background: rgba(255,59,48,0.12); color: var(--ios-red); }
+        .status-unavailable { background: rgba(255,59,48,0.12); color: var(--ios-red); }
+
+        .toast {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            background: var(--ios-red);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 10000;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .tabbar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 76px;
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px;
+            border-top: 1px solid rgba(0,0,0,0.06);
+            z-index: 999;
+        }
+
+        .tab-item {
+            font-size: 12px;
+            color: var(--ios-gray);
+            text-align: center;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+        .tab-item.active { color: var(--ios-blue); }
+        .tab-icon { font-size: 24px; margin-bottom: 4px; display: block; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">←</button>
+        <div class="header-title">在线培训</div>
+    </div>
+
+    <div class="container">
+        <div id="loading" class="loading" style="display: none;">加载中...</div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">📚</div>
+            <div class="empty-text">暂无培训任务</div>
+        </div>
+        <div id="trainingList"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <nav class="tabbar">
+        <a class="tab-item active" href="employee.html">
+            <span class="tab-icon">🏠</span>
+            首页
+        </a>
+        <a class="tab-item" href="mobile-exam-list.html">
+            <span class="tab-icon">📝</span>
+            考试
+        </a>
+        <a class="tab-item" href="mobile-learning-materials-list.html">
+            <span class="tab-icon">📚</span>
+            学习
+        </a>
+    </nav>
+
+    <script>
+        const API = window.location.origin + '/api';
+        let token = localStorage.getItem('employee_token');
+
+        if (!token) {
+            window.location.href = 'index.html';
+        }
+
+        function goBack() {
+            window.location.href = 'employee.html';
+        }
+
+        async function loadTrainings() {
+            try {
+                document.getElementById('loading').style.display = '';
+
+                const res = await fetch(API + '/exam/list', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.code === 0 && data.data && data.data.length > 0) {
+                    renderTrainings(data.data);
+                } else {
+                    document.getElementById('emptyState').style.display = '';
+                }
+            } catch (err) {
+                document.getElementById('loading').textContent = '加载失败';
+                console.error('加载培训列表失败:', err);
+            }
+        }
+
+        function renderTrainings(trainings) {
+            const list = document.getElementById('trainingList');
+
+            const html = trainings.map(training => {
+                let statusClass = 'status-not-started';
+                let statusText = '参加培训';
+                let isDisabled = false;
+
+                if (training.completed) {
+                    if (training.is_passed) {
+                        statusClass = 'status-passed';
+                        statusText = '已通过';
+                    } else {
+                        statusClass = 'status-failed';
+                        statusText = '未通过';
+                    }
+                } else if (!training.is_available) {
+                    statusClass = 'status-unavailable';
+                    statusText = training.unavailable_reason || '不可参加';
+                    isDisabled = true;
+                }
+
+                return `
+                    <div class="training-item ${isDisabled ? 'disabled' : ''}" onclick="${isDisabled ? 'showUnavailableToast(\'' + (training.unavailable_reason || '暂不可参加') + '\')' : 'goToTraining(' + training.learning_task_id + ', ' + training.id + ')'}">
+                        <div class="training-header">
+                            <div class="training-icon">🎬</div>
+                            <div class="training-info">
+                                <div class="training-title">${training.title || '未命名培训'}</div>
+                                ${training.description ? `<div class="training-desc">${training.description}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="training-meta">
+                            <div class="training-info-row">
+                                <span>时长: ${training.duration || 60}分钟</span>
+                                <span>及格分: ${training.pass_score || 60}分</span>
+                            </div>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            list.innerHTML = html;
+        }
+
+        function goToTraining(learningTaskId, trainingId) {
+            // 跳转到学习资料详情页，传入 trainingId 用于后续考试跳转
+            window.location.href = 'mobile-learning-materials-detail.html?id=' + learningTaskId + '&trainingId=' + trainingId;
+        }
+
+        function showUnavailableToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        loadTrainings();
+    </script>
+</body>
+</html>

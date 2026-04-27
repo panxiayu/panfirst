@@ -78,17 +78,43 @@ function checkLearningTaskPermissionByExam(userId, userType, examId) {
   return checkExamPermission(userId);
 }
 
-// 检查用户是否有学习任务权限（只使用粒化权限）
-function checkLearningTaskPermission(userId, userType) {
+// 检查用户是否有学习任务权限
+// 逻辑：员工需要有该学习资料关联的培训考试权限，才能访问学习资料
+function checkLearningTaskPermission(userId, userType, taskId) {
   // 管理员肯定有权限
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-  if (user && (user.role === 'admin' || user.can_manage_task === 1)) return true;
+  if (userType === 'admin') return true;
 
-  // 2. 在 staff 表查找(普通员工)
-  const staff = db.prepare('SELECT task_permission FROM staff WHERE id = ?').get(userId);
-  if (staff && staff.task_permission === 1) return true;
+  // 如果没有指定 taskId，检查是否有任何学习任务权限（有任何考试权限即可）
+  if (!taskId) {
+    const anyExamPerm = db.prepare(`
+      SELECT COUNT(*) as cnt FROM exam_permissions WHERE staff_id = ? AND can_take = 1
+    `).get(userId);
+    return anyExamPerm && anyExamPerm.cnt > 0;
+  }
 
-  return false;
+  // 获取该学习资料关联的所有启用培训
+  const trainings = db.prepare(`
+    SELECT id FROM exam_trainings WHERE learning_task_id = ? AND is_active = 1
+  `).all(taskId);
+
+  if (!trainings || trainings.length === 0) {
+    // 没有关联的启用培训，检查是否有任何考试权限
+    const anyExamPerm = db.prepare(`
+      SELECT COUNT(*) as cnt FROM exam_permissions WHERE staff_id = ? AND can_take = 1
+    `).get(userId);
+    return anyExamPerm && anyExamPerm.cnt > 0;
+  }
+
+  // 检查是否有任何一个关联培训的考试权限
+  const trainingIds = trainings.map(t => t.id);
+  const placeholders = trainingIds.map(() => '?').join(',');
+
+  const examPerm = db.prepare(`
+    SELECT COUNT(*) as cnt FROM exam_permissions
+    WHERE staff_id = ? AND exam_id IN (${placeholders}) AND can_take = 1
+  `).get(userId, ...trainingIds);
+
+  return examPerm && examPerm.cnt > 0;
 }
 
 // 获取所有有考试权限的用户(用于统计，只使用粒化权限)
@@ -133,7 +159,7 @@ router.get('/', authMiddleware, (req, res) => {
     const userId = req.user.type === 'employee' ? req.user.id : req.user.userId;
 
     // 检查是否有学习任务权限
-    const hasPermission = checkLearningTaskPermission(userId);
+    const hasPermission = checkLearningTaskPermission(userId, req.user.type);
 
     // 获取当前时间
     const now = new Date();
@@ -158,7 +184,8 @@ router.get('/', authMiddleware, (req, res) => {
 
     // 非管理员且无学习任务管理权限时，根据考试权限过滤
     if (!hasPermission) {
-      query += ' AND ep.id IS NOT NULL';
+      query += ' AND (SELECT COUNT(*) FROM exam_permissions ep2 INNER JOIN exam_trainings et2 ON et2.id = ep2.exam_id AND et2.learning_task_id = lt.id WHERE ep2.staff_id = ? AND ep2.can_take = 1) > 0';
+      params.push(userId);
     }
 
     if (status) {
@@ -336,7 +363,7 @@ router.get('/:id', authMiddleware, (req, res) => {
     }
 
     // 检查是否有此学习任务绑定的考试权限
-    const hasPermission = checkLearningTaskPermission(userId, req.user.type);
+    const hasPermission = checkLearningTaskPermission(userId, req.user.type, id);
 
     if (!hasPermission) {
       return res.status(403).json({
@@ -595,7 +622,7 @@ router.put('/:id', authMiddleware, (req, res) => {
 
 // 删除学习任务(管理员)
 // DELETE /api/learning-tasks/:id
-router.delete('/:id', authMiddleware, adminMiddleware, (req, res) => {
+router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -620,6 +647,18 @@ router.delete('/:id', authMiddleware, adminMiddleware, (req, res) => {
       });
     }
 
+    // 删除云存储文件（如果是云存储的文件）
+    if (task.file_url && task.file_url.includes('cmecloud.cn')) {
+      try {
+        const { deleteFromCloud } = require('../utils/cloud-storage');
+        await deleteFromCloud(task.file_url);
+        console.log('云存储文件已删除:', task.file_url);
+      } catch (cloudErr) {
+        console.error('删除云存储文件失败:', cloudErr.message);
+        // 不阻塞删除流程，继续删除数据库记录
+      }
+    }
+
     // 删除任务(级联删除权限和进度)
     db.prepare('DELETE FROM learning_progress WHERE task_id = ?').run(id);
     db.prepare('DELETE FROM learning_tasks WHERE id = ?').run(id);
@@ -641,7 +680,7 @@ router.delete('/:id', authMiddleware, adminMiddleware, (req, res) => {
 
 // 批量删除学习任务(管理员)
 // POST /api/learning-tasks/batch-delete
-router.post('/batch-delete', authMiddleware, (req, res) => {
+router.post('/batch-delete', authMiddleware, async (req, res) => {
   try {
     // 检查管理员权限
     if (req.user.role !== 'admin') {
@@ -662,6 +701,21 @@ router.post('/batch-delete', authMiddleware, (req, res) => {
       });
     }
 
+    // 获取要删除的任务的文件信息
+    const tasks = db.prepare(`SELECT id, file_url FROM learning_tasks WHERE id IN (${ids.map(() => '?').join(',')})`).all(...ids);
+
+    // 删除云存储文件
+    try {
+      const { deleteFromCloud } = require('../utils/cloud-storage');
+      for (const task of tasks) {
+        if (task.file_url && task.file_url.includes('cmecloud.cn')) {
+          await deleteFromCloud(task.file_url);
+        }
+      }
+    } catch (cloudErr) {
+      console.error('批量删除云存储文件失败:', cloudErr.message);
+    }
+
     // 删除任务
     const stmt = db.prepare('DELETE FROM learning_tasks WHERE id = ?');
     ids.forEach(id => stmt.run(id));
@@ -678,6 +732,34 @@ router.post('/batch-delete', authMiddleware, (req, res) => {
       msg: '服务器错误',
       data: null
     });
+  }
+});
+
+// 获取学习进度
+// GET /api/learning-materials/:id/progress
+router.get('/:id/progress', authMiddleware, (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.type === 'employee' ? req.user.id : req.user.userId;
+
+    const task = db.prepare('SELECT * FROM learning_tasks WHERE id = ?').get(id);
+    if (!task) {
+      return res.status(404).json({ code: -1, msg: '学习任务不存在', data: null });
+    }
+
+    // 获取所有人员的学习进度（管理员用）
+    const progress = db.prepare(`
+      SELECT lp.*, s.name, s.employee_id, s.department
+      FROM learning_progress lp
+      LEFT JOIN staff s ON lp.staff_id = s.id
+      WHERE lp.task_id = ?
+      ORDER BY s.department, s.name
+    `).all(id);
+
+    res.json({ code: 0, msg: 'success', data: progress });
+  } catch (err) {
+    console.error('获取学习进度失败:', err);
+    res.status(500).json({ code: -1, msg: '服务器错误', data: null });
   }
 });
 
@@ -718,7 +800,7 @@ router.post('/:id/progress', authMiddleware, (req, res) => {
     }
 
     // 检查用户是否有学习任务权限
-    const hasPermission = checkLearningTaskPermission(userId, req.user.type);
+    const hasPermission = checkLearningTaskPermission(userId, req.user.type, id);
 
     if (!hasPermission) {
       return res.status(403).json({
@@ -733,56 +815,101 @@ router.post('/:id/progress', authMiddleware, (req, res) => {
       SELECT * FROM learning_progress WHERE staff_id = ? AND task_id = ?
     `).get(userId, id);
 
+    // 状态优先级：completed > in_progress > not_started
+    const statusPriority = { 'not_started': 0, 'in_progress': 1, 'completed': 2 };
+
     if (existing) {
-      // 更新现有记录
+      // 只保存最高进度：比较 last_position，取最大值
+      const newPosition = last_position !== undefined ? last_position : existing.last_position;
+      const existingPosition = existing.last_position || 0;
+
+      // 状态优先级比较：只取更高的状态
+      const existingStatusPriority = statusPriority[existing.status] || 0;
+      const newStatusPriority = status ? (statusPriority[status] || 0) : 0;
+
+      // 判断是否需要更新
+      const shouldUpdatePosition = newPosition > existingPosition;
+      const shouldUpdateStatus = newStatusPriority > existingStatusPriority;
+
+      // 如果进度更低，直接返回当前最高进度（不舍弃已有进度）
+      if (!shouldUpdatePosition && !shouldUpdateStatus) {
+        return res.json({
+          code: 0,
+          msg: '进度已落后，保留最高记录',
+          data: {
+            progress_percent: existing.progress_percent,
+            last_position: existing.last_position,
+            status: existing.status,
+            is_updated: false
+          }
+        });
+      }
+
+      // 执行更新
       const updates = [];
       const params = [];
 
-      if (status) {
+      if (shouldUpdatePosition) {
+        updates.push('last_position = ?');
+        params.push(newPosition);
+      }
+
+      if (shouldUpdateStatus) {
         updates.push('status = ?');
         params.push(status);
       }
 
       if (progress_percent !== undefined) {
         updates.push('progress_percent = ?');
-        params.push(progress_percent);
-      }
-
-      if (last_position !== undefined) {
-        updates.push('last_position = ?');
-        params.push(last_position);
+        params.push(Math.max(progress_percent, existing.progress_percent || 0));
       }
 
       updates.push("last_access_time = datetime('now')");
 
-      if (status === 'completed') {
+      if (status === 'completed' || existing.status === 'completed') {
         updates.push("completed_at = datetime('now')");
       }
 
-      // WHERE clause params come at the end
       params.push(userId, id);
 
       const query = `UPDATE learning_progress SET ${updates.join(', ')} WHERE staff_id = ? AND task_id = ?`;
       db.prepare(query).run(...params);
+
+      return res.json({
+        code: 0,
+        msg: '学习进度更新成功',
+        data: {
+          progress_percent: Math.max(progress_percent || 0, existing.progress_percent || 0),
+          last_position: shouldUpdatePosition ? newPosition : existingPosition,
+          status: shouldUpdateStatus ? status : existing.status,
+          is_updated: true
+        }
+      });
     } else {
       // 创建新记录
       db.prepare(`
-        INSERT INTO learning_progress (staff_id, task_id, status, progress_percent, last_position, last_access_time)
-        VALUES (?, ?, ?, ?, ?, datetime('now'))
+        INSERT INTO learning_progress (staff_id, task_id, status, progress_percent, last_position, last_access_time, completed_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'), ?)
       `).run(
         userId,
         id,
         status || 'not_started',
         progress_percent || 0,
-        last_position || 0
+        last_position || 0,
+        status === 'completed' ? "datetime('now')" : null
       );
-    }
 
-    res.json({
-      code: 0,
-      msg: '学习进度更新成功',
-      data: null
-    });
+      res.json({
+        code: 0,
+        msg: '学习进度创建成功',
+        data: {
+          progress_percent: progress_percent || 0,
+          last_position: last_position || 0,
+          status: status || 'not_started',
+          is_updated: true
+        }
+      });
+    }
   } catch (err) {
     console.error('更新学习进度失败:', err);
     res.status(500).json({

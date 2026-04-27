@@ -25,6 +25,19 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// 迁移：为已存在的 exam_trainings 表添加 is_draft 列
+try {
+  db.prepare("ALTER TABLE exam_trainings ADD COLUMN is_draft INTEGER DEFAULT 0").run();
+} catch (e) {}
+// 迁移：为已存在的 exam_trainings 表添加 is_archived 列（标记是否曾启用过，停用后保留记录）
+try {
+  db.prepare("ALTER TABLE exam_trainings ADD COLUMN is_archived INTEGER DEFAULT 0").run();
+} catch (e) {}
+// 迁移：将为启用的培训任务标记为 is_archived = 1（保留历史记录）
+try {
+  db.prepare("UPDATE exam_trainings SET is_archived = 1 WHERE is_active = 1").run();
+} catch (e) {}
+
 // GET /api/exam-trainings - 获取培训列表
 router.get('/', authMiddleware, adminMiddleware, (req, res) => {
   try {
@@ -48,24 +61,84 @@ router.get('/', authMiddleware, adminMiddleware, (req, res) => {
   }
 });
 
+// GET /api/exam-trainings/records-summary - 获取培训记录汇总（用于"培训记录"标签页）
+router.get('/records-summary', authMiddleware, adminMiddleware, (req, res) => {
+  try {
+    // 获取已启用的培训任务，或曾经有过考试记录的培训任务（永久保留）
+    const trainings = db.prepare(`
+      SELECT
+        et.id,
+        et.title,
+        et.description,
+        et.start_time,
+        et.end_time,
+        et.duration,
+        et.pass_score,
+        et.is_active,
+        et.created_at,
+        lt.title as learning_task_title,
+        eb.title as question_bank_title,
+        (SELECT COUNT(*) FROM exam_permissions WHERE exam_id = et.id) as perm_count,
+        (SELECT COUNT(*) FROM exam_permissions ep
+         INNER JOIN learning_progress lp ON lp.staff_id = ep.staff_id AND lp.task_id = et.learning_task_id
+         WHERE ep.exam_id = et.id AND lp.status = 'completed') as completed_learning_count,
+        (SELECT COUNT(DISTINCT er.user_id) FROM exam_records er WHERE er.exam_id = et.id AND er.submitted_at IS NOT NULL) as total_participated,
+        (SELECT AVG(er.score) FROM exam_records er WHERE er.exam_id = et.id AND er.submitted_at IS NOT NULL) as avg_score,
+        (SELECT COUNT(*) FROM exam_records er WHERE er.exam_id = et.id AND er.submitted_at IS NOT NULL AND er.score >= et.pass_score) as passed_count
+      FROM exam_trainings et
+      LEFT JOIN learning_tasks lt ON et.learning_task_id = lt.id
+      LEFT JOIN exam_banks eb ON et.question_bank_id = eb.id
+      WHERE et.is_active = 1 OR et.is_archived = 1
+      ORDER BY et.is_active DESC, et.created_at DESC
+    `).all();
+
+    const formattedTrainings = trainings.map(t => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      start_time: t.start_time,
+      end_time: t.end_time,
+      duration: t.duration,
+      pass_score: t.pass_score,
+      is_active: t.is_active,
+      created_at: t.created_at,
+      learning_task_title: t.learning_task_title,
+      question_bank_title: t.question_bank_title,
+      perm_count: t.perm_count || 0,
+      completed_learning_count: t.completed_learning_count || 0,
+      total_participated: t.total_participated || 0,
+      avg_score: t.avg_score ? Math.round(t.avg_score * 10) / 10 : 0,
+      passed_count: t.passed_count || 0,
+      participation_rate: t.perm_count > 0 ? Math.round((t.total_participated / t.perm_count) * 100) : 0,
+      pass_rate: t.total_participated > 0 ? Math.round((t.passed_count / t.total_participated) * 100) : 0
+    }));
+
+    res.json({ code: 0, msg: 'success', data: formattedTrainings });
+  } catch (err) {
+    console.error('获取培训记录汇总失败:', err);
+    res.status(500).json({ code: -1, msg: '服务器错误', data: null });
+  }
+});
+
 // POST /api/exam-trainings - 创建培训
 router.post('/', authMiddleware, adminMiddleware, (req, res) => {
   try {
-    const { title, description, start_time, end_time, duration, pass_score, is_active, learning_task_id, question_bank_id } = req.body;
+    const { title, description, start_time, end_time, duration, pass_score, is_active, is_draft, learning_task_id, question_bank_id } = req.body;
 
     if (!title || !title.trim()) {
       return res.status(400).json({ code: -1, msg: '培训标题不能为空', data: null });
     }
 
     const result = db.prepare(`
-      INSERT INTO exam_trainings (title, description, duration, pass_score, is_active, start_time, end_time, learning_task_id, question_bank_id, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO exam_trainings (title, description, duration, pass_score, is_active, is_draft, start_time, end_time, learning_task_id, question_bank_id, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       title.trim(),
       description || '',
       duration || 60,
       pass_score || 60,
-      is_active ? 1 : 0,
+      is_active !== undefined ? (is_active ? 1 : 0) : 0,
+      is_draft ? 1 : 0,
       start_time || null,
       end_time || null,
       learning_task_id || null,
@@ -81,33 +154,10 @@ router.post('/', authMiddleware, adminMiddleware, (req, res) => {
   }
 });
 
-// GET /api/exam-trainings/:id - 获取培训详情
-router.get('/:id', authMiddleware, adminMiddleware, (req, res) => {
-  try {
-    const training = db.prepare('SELECT * FROM exam_trainings WHERE id = ?').get(req.params.id);
-    if (!training) {
-      return res.status(404).json({ code: -1, msg: '培训不存在', data: null });
-    }
-
-    // 获取题目
-    let questions = [];
-    if (training.question_bank_id) {
-      questions = db.prepare(`
-        SELECT * FROM questions WHERE exam_id = ? ORDER BY sort_order ASC, id ASC
-      `).all(training.question_bank_id);
-    }
-
-    res.json({ code: 0, msg: 'success', data: { training, questions } });
-  } catch (err) {
-    console.error('获取培训详情失败:', err);
-    res.status(500).json({ code: -1, msg: '服务器错误', data: null });
-  }
-});
-
 // PUT /api/exam-trainings/:id - 更新培训
 router.put('/:id', authMiddleware, adminMiddleware, (req, res) => {
   try {
-    const { title, description, start_time, end_time, duration, pass_score, is_active, learning_task_id, question_bank_id } = req.body;
+    const { title, description, start_time, end_time, duration, pass_score, is_active, is_draft, learning_task_id, question_bank_id } = req.body;
 
     // 保留原值当参数为 undefined 时
     const currentTraining = db.prepare('SELECT * FROM exam_trainings WHERE id = ?').get(req.params.id);
@@ -117,11 +167,15 @@ router.put('/:id', authMiddleware, adminMiddleware, (req, res) => {
       return res.status(400).json({ code: -1, msg: '培训标题不能为空', data: null });
     }
 
+    // 如果启用培训，设置 is_archived = 1（标记曾启用过，停用后保留记录）
+    const shouldArchive = is_active !== undefined && is_active === true && currentTraining.is_active !== 1;
+
     db.prepare(`
       UPDATE exam_trainings SET
-        title = ?, description = ?, duration = ?, pass_score = ?, is_active = ?,
+        title = ?, description = ?, duration = ?, pass_score = ?, is_active = ?, is_draft = ?,
         start_time = ?, end_time = ?,
-        learning_task_id = ?, question_bank_id = ?, updated_at = datetime('now', 'localtime')
+        learning_task_id = ?, question_bank_id = ?,
+        is_archived = ?, updated_at = datetime('now', 'localtime')
       WHERE id = ?
     `).run(
       title !== undefined ? title.trim() : currentTraining.title,
@@ -129,10 +183,12 @@ router.put('/:id', authMiddleware, adminMiddleware, (req, res) => {
       duration !== undefined ? duration : currentTraining.duration,
       pass_score !== undefined ? pass_score : currentTraining.pass_score,
       is_active !== undefined ? (is_active ? 1 : 0) : currentTraining.is_active,
+      is_draft !== undefined ? (is_draft ? 1 : 0) : currentTraining.is_draft,
       start_time !== undefined ? start_time : currentTraining.start_time,
       end_time !== undefined ? end_time : currentTraining.end_time,
       learning_task_id !== undefined ? learning_task_id : currentTraining.learning_task_id,
       question_bank_id !== undefined ? question_bank_id : currentTraining.question_bank_id,
+      shouldArchive ? 1 : currentTraining.is_archived,
       req.params.id
     );
 
@@ -140,6 +196,33 @@ router.put('/:id', authMiddleware, adminMiddleware, (req, res) => {
     res.json({ code: 0, msg: '培训更新成功', data: training });
   } catch (err) {
     console.error('更新培训失败:', err);
+    res.status(500).json({ code: -1, msg: '服务器错误', data: null });
+  }
+});
+
+// POST /api/exam-trainings/:id/publish - 将草稿发布为正式培训
+router.post('/:id/publish', authMiddleware, adminMiddleware, (req, res) => {
+  try {
+    const training = db.prepare('SELECT * FROM exam_trainings WHERE id = ?').get(req.params.id);
+    if (!training) {
+      return res.status(404).json({ code: -1, msg: '培训不存在', data: null });
+    }
+
+    // 验证必填项
+    if (!training.title || !training.learning_task_id || !training.question_bank_id) {
+      return res.status(400).json({ code: -1, msg: '请先填写完整的培训信息', data: null });
+    }
+
+    // 将 is_draft 设为 0，is_active 保持 0（未启用）
+    db.prepare(`
+      UPDATE exam_trainings SET is_draft = 0, is_active = 0, updated_at = datetime('now', 'localtime')
+      WHERE id = ?
+    `).run(req.params.id);
+
+    const updated = db.prepare('SELECT * FROM exam_trainings WHERE id = ?').get(req.params.id);
+    res.json({ code: 0, msg: '发布成功', data: updated });
+  } catch (err) {
+    console.error('发布培训失败:', err);
     res.status(500).json({ code: -1, msg: '服务器错误', data: null });
   }
 });
@@ -168,6 +251,7 @@ router.delete('/:id', authMiddleware, adminMiddleware, (req, res) => {
 // GET /api/exam-trainings/:id/permissions - 获取培训权限
 router.get('/:id/permissions', authMiddleware, adminMiddleware, (req, res) => {
   try {
+    console.log('PERMISSIONS ROUTE HIT for id:', req.params.id);
     const training = db.prepare('SELECT * FROM exam_trainings WHERE id = ?').get(req.params.id);
     if (!training) {
       return res.status(404).json({ code: -1, msg: '培训不存在', data: null });
@@ -175,13 +259,14 @@ router.get('/:id/permissions', authMiddleware, adminMiddleware, (req, res) => {
 
     // 获取所有员工，带权限标记
     const staff = db.prepare(`
-      SELECT s.id, s.name, s.employee_id, s.department, s.team,
+      SELECT s.id, s.name, s.name_pinyin, s.employee_id, s.department, s.team,
         CASE WHEN ep.id IS NOT NULL THEN 1 ELSE 0 END as has_perm
       FROM staff s
       LEFT JOIN exam_permissions ep ON s.id = ep.staff_id AND ep.exam_id = ?
       ORDER BY s.department, s.name
     `).all(req.params.id);
 
+    console.log('DEBUG permissions staff[0]:', JSON.stringify(staff[0]));
     res.json({ code: 0, msg: 'success', data: staff });
   } catch (err) {
     console.error('获取培训权限失败:', err);
@@ -238,6 +323,29 @@ router.put('/:id/permissions', authMiddleware, adminMiddleware, (req, res) => {
     }
   } catch (err) {
     console.error('保存培训权限失败:', err);
+    res.status(500).json({ code: -1, msg: '服务器错误', data: null });
+  }
+});
+
+// GET /api/exam-trainings/:id/exam-records - 获取培训考试记录
+router.get('/:id/exam-records', authMiddleware, adminMiddleware, (req, res) => {
+  try {
+    const training = db.prepare('SELECT * FROM exam_trainings WHERE id = ?').get(req.params.id);
+    if (!training) {
+      return res.status(404).json({ code: -1, msg: '培训不存在', data: null });
+    }
+
+    const records = db.prepare(`
+      SELECT er.*, s.name, s.employee_id, s.department
+      FROM exam_records er
+      LEFT JOIN staff s ON er.user_id = s.id
+      WHERE er.exam_id = ?
+      ORDER BY er.submitted_at DESC
+    `).all(req.params.id);
+
+    res.json({ code: 0, msg: 'success', data: records });
+  } catch (err) {
+    console.error('获取考试记录失败:', err);
     res.status(500).json({ code: -1, msg: '服务器错误', data: null });
   }
 });
@@ -327,6 +435,38 @@ router.post('/:id/import-participants', authMiddleware, adminMiddleware, upload.
   } catch (err) {
     console.error('导入人员失败:', err);
     res.status(500).json({ code: -1, msg: '导入失败：' + err.message, data: null });
+  }
+});
+
+// GET /api/exam-trainings/:id - 获取培训详情（放在最后，因为是通用路由）
+router.get('/:id', authMiddleware, adminMiddleware, (req, res) => {
+  try {
+    const training = db.prepare(`
+      SELECT et.*,
+        eb.title as question_bank_title,
+        lt.title as learning_task_title
+      FROM exam_trainings et
+      LEFT JOIN exam_banks eb ON et.question_bank_id = eb.id
+      LEFT JOIN learning_tasks lt ON et.learning_task_id = lt.id
+      WHERE et.id = ?
+    `).get(req.params.id);
+
+    if (!training) {
+      return res.status(404).json({ code: -1, msg: '培训不存在', data: null });
+    }
+
+    // 获取题目
+    let questions = [];
+    if (training.question_bank_id) {
+      questions = db.prepare(`
+        SELECT * FROM questions WHERE exam_id = ? ORDER BY sort_order ASC, id ASC
+      `).all(training.question_bank_id);
+    }
+
+    res.json({ code: 0, msg: 'success', data: { training, questions } });
+  } catch (err) {
+    console.error('获取培训详情失败:', err);
+    res.status(500).json({ code: -1, msg: '服务器错误', data: null });
   }
 });
 

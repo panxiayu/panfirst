@@ -87,6 +87,7 @@ router.post('/login', (req, res) => {
         userId: user.id,
         username: user.username,
         role: user.role,
+        type: 'admin',
         can_manage_voting: user.can_manage_voting || 0,
         can_manage_exam: user.can_manage_exam || 0,
         can_manage_meal: user.can_manage_meal || 0,

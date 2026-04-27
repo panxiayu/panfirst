@@ -54,6 +54,9 @@ try {
 try {
   db.prepare("ALTER TABLE exam_trainings ADD COLUMN end_time DATETIME").run();
 } catch (e) {}
+try {
+  db.prepare("ALTER TABLE exam_trainings ADD COLUMN is_draft INTEGER DEFAULT 0").run();
+} catch (e) {}
 
 // GET /api/question-banks - 获取题库列表
 router.get('/', authMiddleware, adminMiddleware, (req, res) => {
